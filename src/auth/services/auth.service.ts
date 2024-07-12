@@ -26,28 +26,6 @@ export class AuthService {
     this.logger.setContext(AuthService.name);
   }
 
-  async validateUser(
-    ctx: RequestContext,
-    username: string,
-    pass: string,
-  ): Promise<UserAccessTokenClaims> {
-    this.logger.log(ctx, `${this.validateUser.name} was called`);
-
-    // The userService will throw Unauthorized in case of invalid username/password.
-    const user = await this.userService.validateUsernamePassword(
-      ctx,
-      username,
-      pass,
-    );
-
-    // Prevent disabled users from logging in.
-    if (user.isAccountDisabled) {
-      throw new UnauthorizedException('This user account has been disabled');
-    }
-
-    return user;
-  }
-
   login(ctx: RequestContext): AuthTokenOutput {
     this.logger.log(ctx, `${this.login.name} was called`);
 

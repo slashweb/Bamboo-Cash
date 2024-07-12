@@ -28,7 +28,7 @@
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "typeorm": "typeorm-ts-node-commonjs -d ./ormconfig.ts",
-    "migration:generate": "ts-node node_modules/.bin/typeorm migration:generate -d ormconfig.ts database/migrations/$npm_config_name",
+    "migration:generate": "ts-node node_modules/.bin/typeorm migration:generate -d ormconfig.ts database/migrations/migrations/$npm_config_name",
     "migration:run": "ts-node node_modules/.bin/typeorm migration:run -d ormconfig.ts",
     "migration:revert": "ts-node node_modules/.bin/typeorm migration:revert -d ormconfig.ts",
     "doc:serve": "npx compodoc -p tsconfig.json -w -s -r 8001",

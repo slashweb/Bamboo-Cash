@@ -1,40 +1,19 @@
-import {
-  Column,
-  CreateDateColumn,
-  Entity,
-  PrimaryGeneratedColumn,
-  Unique,
-  UpdateDateColumn,
-} from 'typeorm';
+import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
+
+import { BankAccount } from './bank-account.entity';
+import { UserNetwork } from './user-network.entity';
 
 @Entity('users')
 export class User {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column({ length: 100 })
-  name: string;
+  @Column({ length: 15 })
+  phone: string;
 
-  @Column()
-  password: string;
+  @OneToMany(() => BankAccount, (bankAccounts) => bankAccounts.user)
+  bankAccounts: BankAccount[];
 
-  @Unique('username', ['username'])
-  @Column({ length: 200 })
-  username: string;
-
-  @Column('simple-array')
-  roles: string[];
-
-  @Column()
-  isAccountDisabled: boolean;
-
-  @Unique('email', ['email'])
-  @Column({ length: 200 })
-  email: string;
-
-  @CreateDateColumn({ name: 'createdAt', nullable: true })
-  createdAt: Date;
-
-  @UpdateDateColumn({ name: 'updatedAt', nullable: true })
-  updatedAt: Date;
+  @OneToMany(() => UserNetwork, (userNetwork) => userNetwork.user)
+  networks: UserNetwork[];
 }
