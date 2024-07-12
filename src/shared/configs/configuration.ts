@@ -26,4 +26,7 @@ export default (): any => ({
       10,
     ),
   },
+  circle: {
+    secret: process.env.CIRCLE_SECRET,
+  }
 });

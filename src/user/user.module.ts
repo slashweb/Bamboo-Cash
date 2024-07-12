@@ -8,9 +8,10 @@ import { User } from './entities/user.entity';
 import { UserRepository } from './repositories/user.repository';
 import { UserService } from './services/user.service';
 import { UserAclService } from './services/user-acl.service';
+import { HttpModule } from '@nestjs/axios';
 
 @Module({
-  imports: [SharedModule, TypeOrmModule.forFeature([User])],
+  imports: [SharedModule, TypeOrmModule.forFeature([User]), HttpModule],
   providers: [UserService, JwtAuthStrategy, UserAclService, UserRepository],
   controllers: [UserController],
   exports: [UserService],
