@@ -5,6 +5,8 @@ import {
 
 import { AppLogger } from '../../shared/logger/logger.service';
 import { CircleService } from '../services/circle.service';
+import forge from 'node-forge';
+import * as crypto from 'crypto';
 
 @Controller('circle')
 export class CircleController {
@@ -26,7 +28,15 @@ export class CircleController {
       // @ts-expect-error
       const pk = response.data.publicKey
 
-      return pk
+      const secret = crypto.randomBytes(32).toString('hex')
+
+      const entitySecret = forge.util.hexToBytes(secret)
+      const publicKey = forge.pki.publicKeyFromPem(pk)
+      const encryptedData = publicKey.encrypt(entitySecret, 'RSA-OAEP', { md: forge.md.sha256.create(), mgf1: { md: forge.md.sha256.create(), }, });
+      const encryptedDataHex = forge.util.encode64(encryptedData)
+
+      console.log('tenebrosamente', encryptedDataHex)
+      return encryptedDataHex
 
     } catch (error) {
       console.log('tenebroso', error)
