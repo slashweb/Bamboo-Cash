@@ -33,6 +33,6 @@ export class ChatController {
 
   @Get('create-assistant')
   async createAssistant() {
-    return this.chatService.createAssistant();
+    //return this.chatService.createAssistant();
   }
 }

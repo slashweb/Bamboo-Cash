@@ -1,3 +1,4 @@
+import { CacheModule } from '@nestjs/cache-manager';
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TwilioModule } from 'nestjs-twilio';
@@ -18,6 +19,7 @@ import { OpenAIService } from './services/open-ai.service';
       }),
       inject: [ConfigService],
     }),
+    CacheModule.register(),
   ],
   providers: [ChatService, OpenAIService],
   controllers: [ChatController],
