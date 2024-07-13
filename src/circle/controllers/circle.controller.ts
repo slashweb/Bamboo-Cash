@@ -79,7 +79,7 @@ export class CircleController {
       console.log('response', response);
       return response;
     } catch (error) {
-      console.log('error tenebroso', error);
+      console.log('error tenebroso');
       return error;
     }
   }
