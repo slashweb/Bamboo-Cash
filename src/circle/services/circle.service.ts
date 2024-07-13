@@ -7,6 +7,8 @@ import * as crypto from 'crypto';
 import { encodeParameter } from 'web3-eth-abi';
 import { AppLogger } from '../../shared/logger/logger.service';
 import { UserService } from '../../user/services/user.service';
+import { Web3 } from 'web3';
+import fetch from 'node-fetch';
 
 @Injectable()
 export class CircleService {
@@ -19,6 +21,7 @@ export class CircleService {
     this.logger.setContext(CircleService.name);
     this.API_KEY = this.configService.get('circle.secret');
     this.API_SK = this.configService.get('circle.sk');
+    this.TRANSACTION_URI = this.configService.get('circle.transaction_uri');
     this.GET_OPTIONS = {
       method: 'GET',
       headers: {
@@ -39,8 +42,7 @@ export class CircleService {
   private readonly API_SK;
   private readonly GET_OPTIONS;
   private readonly POST_OPTIONS;
-  private PK_URL = 'https://api.circle.com/v1/w3s/config/entity/publicKey';
-  private WALLET_SET = 'https://api.circle.com/v1/w3s/developer/walletSets';
+  private readonly TRANSACTION_URI;
 
   getPublicKeys() {
     return new Promise((resolve, reject) => {
@@ -90,7 +92,7 @@ export class CircleService {
       entitySecret: this.API_SK,
     });
 
-    const BLOCKCHAINS = ['MATIC-AMOY'] as Blockchain[];
+    const BLOCKCHAINS = ['ETH-SEPOLIA'] as Blockchain[];
     const response = await circleDeveloperSdk.createWallets({
       accountType: 'SCA',
       blockchains: BLOCKCHAINS,
@@ -152,7 +154,7 @@ export class CircleService {
       fee: {
         type: 'level',
         config: {
-          feeLevel: 'LOW',
+          feeLevel: 'HIGH',
         },
       },
     });
@@ -167,7 +169,7 @@ export class CircleService {
     });
 
     const fixedAmount = '100000000000000'; // 1000 USD
-    const contractAddress = '0x41e94eb019c0762f9bfcf9fb1e58725bfb0e7582';
+    const contractAddress = '0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238';
     const tokenMessengerAddress = '0x9f3B8679c73C2Fef8b59B4f3444d4e156fb70AA5';
 
     const res = await circleDeveloperSdk.createContractExecutionTransaction({
@@ -178,7 +180,7 @@ export class CircleService {
       fee: {
         type: 'level',
         config: {
-          feeLevel: 'LOW',
+          feeLevel: 'HIGH',
         },
       },
     });
@@ -215,23 +217,90 @@ export class CircleService {
       domainValue = '0';
       contractToken = '0x41e94eb019c0762f9bfcf9fb1e58725bfb0e7582';
     }
-
     /**
-    const response = await circleDeveloperSdk.createContractExecutionTransaction({
-      abiFunctionSignature: 'depositForBurn(uint256 amount, uint32 destinationDomain, bytes32 mintRecipient, address burnToken)',
-      abiParameters: [amount, domainValue, encodedDestination, contractToken],
-      contractAddress,
-      walletId,
-      fee: {
-        type: 'level',
-        config: {
-          feeLevel: 'HIGH',
-        },
-      },
-    });
-    **/
-    const transactionId = 'df8e76b7-5ba6-5cb1-98a5-eaa7f27464b6';
+     const response = await circleDeveloperSdk.createContractExecutionTransaction({
+     abiFunctionSignature: 'depositForBurn(uint256 amount, uint32 destinationDomain, bytes32 mintRecipient, address burnToken)',
+     abiParameters: [amount, domainValue, encodedDestination, contractToken],
+     contractAddress,
+     walletId,
+     fee: {
+     type: 'level',
+     config: {
+     feeLevel: 'HIGH',
+     },
+     },
+     });
 
+     return response.data;
+     **/
+    const transactionId = '8312cfbb-3520-5ef7-b699-650ff40787df';
+
+    console.log('transactionId', transactionId);
+    fetch(`${this.TRANSACTION_URI}/${transactionId}`, this.GET_OPTIONS)
+      .then((res) => res.json())
+      .then(async (json) => {
+        const txHash = json.data.transaction.txHash;
+
+        console.log('txHash', txHash);
+        let rpc = 'https://ethereum-sepolia.blockpi.network/v1/rpc/public';
+        if (destinationName === 'ETH-SEPOLIA') {
+          rpc = 'https://rpc-amoy.polygon.technology/';
+        }
+
+        const web3 = new Web3(rpc);
+
+        // get messageBytes from EVM logs using txHash of the transaction.
+        const transactionReceipt = await web3.eth.getTransactionReceipt(txHash);
+
+        const eventTopic = web3.utils.keccak256('MessageSent(bytes)');
+        const log = transactionReceipt.logs.find((l) => {
+          if (!Array.isArray(l.topics)) return false;
+          return l.topics[0] === eventTopic;
+        });
+        if (!log?.data) return;
+
+        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+        // @ts-expect-error
+        const messageBytes = web3.eth.abi.decodeParameters(['bytes'], log.data)[0];
+
+        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+        // @ts-expect-error
+        const messageHash = web3.utils.keccak256(messageBytes);
+
+
+        // Get attestation signature from iris-api.circle.com
+        let attestationResponse = { status: 'pending', attestation: '' };
+        while (attestationResponse.status != 'complete') {
+          const response = await fetch(
+            `https://iris-api-sandbox.circle.com/attestations/${messageHash}`,
+          );
+          attestationResponse = await response.json();
+          console.log('trying again', attestationResponse.status);
+          await new Promise((r) => setTimeout(r, 2000));
+        }
+
+        console.log('attestationResponse', attestationResponse);
+        const attestation = attestationResponse.attestation;
+        const messageTransmitterContractAddress = '0x7865fAfC2db2093669d92c0F33AeEF291086BEFD';
+
+        console.log('Before receiveMessage', attestation, destinationAddress);
+        const response = await circleDeveloperSdk.createContractExecutionTransaction({
+          abiFunctionSignature: 'receiveMessage(bytes message,bytes attestation)',
+          abiParameters: [messageHash, attestation],
+          contractAddress: messageTransmitterContractAddress,
+          walletId: 'befa3540-ab35-5fcf-ac4a-c4a1a2e3c903',
+          fee: {
+            type: 'level',
+            config: {
+              feeLevel: 'HIGH',
+            },
+          },
+        });
+
+        console.log('response', response.data);
+        return response.data;
+
+      });
     //return response.data;
   }
 }
