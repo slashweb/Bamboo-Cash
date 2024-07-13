@@ -40,4 +40,9 @@ export default (): any => ({
     apiKey: process.env.OPENAI_API_KEY,
     assistantId: process.env.OPENAI_ASSISTANT_ID,
   },
+  bitso: {
+    env: process.env.BITSO_ENV,
+    apiKey: process.env.BITSO_API_KEY,
+    apiSecret: process.env.BITSO_API_SECRET,
+  },
 });

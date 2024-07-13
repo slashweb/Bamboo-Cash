@@ -6,6 +6,7 @@ import { RequestContext } from '../../shared/request-context/request-context.dto
 import { CreateUserInput } from '../dtos/user-create-input.dto';
 import { UserOutput } from '../dtos/user-output.dto';
 import { User } from '../entities/user.entity';
+import { ContactRepository } from '../repositories/contact.repository';
 import { NetworkRepository } from '../repositories/network.repository';
 import { UserRepository } from '../repositories/user.repository';
 import { UserNetworkRepository } from '../repositories/user-network.repository';
@@ -19,6 +20,7 @@ export class UserService {
     private walletSetRepository: WalletSetRepository,
     private userNetworkRepository: UserNetworkRepository,
     private networkRepository: NetworkRepository,
+    private contactRepository: ContactRepository,
   ) {
     this.logger.setContext(UserService.name);
   }
@@ -88,6 +90,18 @@ export class UserService {
 
   async getNetworkByName(name: string) {
     return await this.networkRepository.findOne({ where: { name } });
+  }
+
+  async findContactByFilter(filter: any) {
+    return this.contactRepository.findOne({ where: filter });
+  }
+
+  async createContact(ownerId: number, name: string, phone: string) {
+    return await this.contactRepository.save({
+      ownerId,
+      name,
+      phone,
+    });
   }
 
   // async validateUsernamePassword(

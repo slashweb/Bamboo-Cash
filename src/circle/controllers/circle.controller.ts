@@ -111,4 +111,26 @@ export class CircleController {
     }
   }
 
+  @Post('transfer-different-network')
+  async transferDifferentNetwork(@Body() body: {
+    walletId: string;
+    amount: string,
+    tokenId: string,
+    destinationAddress: string,
+    destinationName: string
+  }) {
+    try {
+      return await this.circleService.transferForDifferentNetwork(
+        body.walletId,
+        body.tokenId,
+        '',
+        [body.amount],
+        body.destinationAddress,
+        body.destinationName
+      )
+    } catch (error) {
+      return error;
+    }
+  }
+
 }

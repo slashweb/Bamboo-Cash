@@ -8,6 +8,7 @@ import { ChatModule } from './chat/chat.module';
 import { CircleModule } from './circle/circle.module';
 import { SharedModule } from './shared/shared.module';
 import { UserModule } from './user/user.module';
+import { WireModule } from './wire/wire.module';
 
 @Module({
   imports: [
@@ -16,6 +17,7 @@ import { UserModule } from './user/user.module';
     AuthModule,
     CircleModule,
     ChatModule,
+    WireModule,
     CacheModule.register(),
   ],
   controllers: [AppController],

@@ -1,12 +1,13 @@
+import { initiateDeveloperControlledWalletsClient } from '@circle-fin/developer-controlled-wallets';
+import { Blockchain } from '@circle-fin/smart-contract-platform';
 import { HttpService } from '@nestjs/axios';
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as crypto from 'crypto';
-import { initiateDeveloperControlledWalletsClient } from '@circle-fin/developer-controlled-wallets';
+import { encodeParameter } from 'web3-eth-abi';
 
 import { AppLogger } from '../../shared/logger/logger.service';
 import { UserService } from '../../user/services/user.service';
-import { Blockchain } from '@circle-fin/smart-contract-platform';
 
 @Injectable()
 export class CircleService {
@@ -90,7 +91,7 @@ export class CircleService {
       entitySecret: this.API_SK,
     });
 
-    const BLOCKCHAINS = ['MATIC-AMOY', 'ETH-SEPOLIA', 'AVAX-FUJI', 'SOL-DEVNET'] as Blockchain[];
+    const BLOCKCHAINS = ['MATIC-AMOY'] as Blockchain[];
     const response = await circleDeveloperSdk.createWallets({
       accountType: 'SCA',
       blockchains: BLOCKCHAINS,
@@ -141,24 +142,96 @@ export class CircleService {
       entitySecret: this.API_SK,
     });
 
-    console.log('walletId: ', walletId);
-    console.log('tokenId: ', tokenId);
-    console.log('amounts: ', amounts);
-    console.log('destinationAddress: ', destinationAddress);
-    
+    const usdValue = 1000000;
+    const amount = [String(Number(amounts[0]) * usdValue)];
+
     const response = await circleDeveloperSdk.createTransaction({
-        walletId,
-        tokenId,
-        destinationAddress,
-        amount: amounts,
-        fee: {
-          type: 'level',
-          config: {
-            feeLevel: 'LOW',
-          },
+      walletId,
+      tokenId,
+      destinationAddress,
+      amount,
+      fee: {
+        type: 'level',
+        config: {
+          feeLevel: 'LOW',
         },
-      });
+      },
+    });
 
     return response.data;
+  }
+
+  async configureApproveTransaction(walletId: string) {
+    const circleDeveloperSdk = initiateDeveloperControlledWalletsClient({
+      apiKey: this.API_KEY,
+      entitySecret: this.API_SK,
+    });
+
+    const fixedAmount = "100000000000000"; // 1000 USD
+    const contractAddress = '0x41e94eb019c0762f9bfcf9fb1e58725bfb0e7582';
+    const tokenMessengerAddress = '0x9f3B8679c73C2Fef8b59B4f3444d4e156fb70AA5';
+
+    const res = await circleDeveloperSdk.createContractExecutionTransaction({
+      contractAddress,
+      abiFunctionSignature: 'approve(address spender, uint256 value)',
+      abiParameters: [tokenMessengerAddress, fixedAmount],
+      walletId,
+      fee: {
+        type: 'level',
+        config: {
+          feeLevel: 'LOW',
+        },
+      },
+    });
+
+    return res.data;
+  }
+
+  async transferForDifferentNetwork(
+    walletId: string,
+    originTokenId: string,
+    destinationTokenId: string,
+    amounts: string[],
+    destinationAddress: string,
+    destinationName: string,
+  ) {
+    const circleDeveloperSdk = initiateDeveloperControlledWalletsClient({
+      apiKey: this.API_KEY,
+      entitySecret: this.API_SK,
+    });
+
+    //await this.configureApproveTransaction(walletId);
+    //return;
+
+    const contractAddress = '0x9f3B8679c73C2Fef8b59B4f3444d4e156fb70AA5';
+    const encodedDestination = encodeParameter('address', destinationAddress);
+
+    const usdValue = 1000000;
+    const amount = String(Number(amounts[0]) * usdValue);
+
+    // Transfer to Polygon
+    let domainValue = "7";
+    let contractToken = '0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238';
+    if (destinationName === 'ETH-SEPOLIA') {
+      domainValue = "0";
+      contractToken = '0x41e94eb019c0762f9bfcf9fb1e58725bfb0e7582';
+    }
+
+    const response = await circleDeveloperSdk.createContractExecutionTransaction({
+      abiFunctionSignature: 'depositForBurn(uint256 amount, uint32 destinationDomain, bytes32 mintRecipient, address burnToken)',
+      abiParameters: [amount, domainValue, encodedDestination, contractToken],
+      contractAddress,
+      walletId,
+      fee: {
+        type: 'level',
+        config: {
+          feeLevel: 'HIGH',
+        },
+      },
+    });
+
+    const transactionId = 'df8e76b7-5ba6-5cb1-98a5-eaa7f27464b6'
+
+    //return response.data;
   }
 }
