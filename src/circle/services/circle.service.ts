@@ -9,7 +9,6 @@ import { UserService } from '../../user/services/user.service';
 
 @Injectable()
 export class CircleService {
-
   constructor(
     private readonly logger: AppLogger,
     private readonly httpService: HttpService,
@@ -51,7 +50,8 @@ export class CircleService {
         entitySecret: secret,
       });
 
-      circleDeveloperSdk.getPublicKey()
+      circleDeveloperSdk
+        .getPublicKey()
         .then((res) => {
           resolve({ pk: res.data?.publicKey, secret });
         })
@@ -59,10 +59,9 @@ export class CircleService {
           reject(error);
         });
     });
-  };
+  }
 
   async createWalletSet(userId: number) {
-
     const circleDeveloperSdk = initiateDeveloperControlledWalletsClient({
       apiKey: this.API_KEY,
       entitySecret: this.API_SK,
@@ -72,15 +71,18 @@ export class CircleService {
       name: userId.toString(),
     });
 
-
     // eslint-disable-next-line @typescript-eslint/ban-ts-comment
     // @ts-expect-error
     const walletSetId = response.data.walletSet.id;
 
-    return await this.userService.createWalletSet(userId.toString(), walletSetId);
+    return await this.userService.createWalletSet(
+      userId.toString(),
+      walletSetId,
+    );
   }
 
   async createWallet(walletSetId: string) {
+    console.log('walletSetId: ', walletSetId);
 
     const circleDeveloperSdk = initiateDeveloperControlledWalletsClient({
       apiKey: this.API_KEY,
@@ -96,6 +98,7 @@ export class CircleService {
     });
 
     const user = await this.userService.findUserByWalletSetId(walletSetId);
+    if (!user) return;
 
     // eslint-disable-next-line @typescript-eslint/ban-ts-comment
     // @ts-expect-error
@@ -103,9 +106,13 @@ export class CircleService {
 
     const returnWallets = [];
     for (const wallet of wallets) {
-      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-      // @ts-expect-error
-      returnWallets.push(await this.userService.createUserNetworkRepository(user.id.toString(), BLOCKCHAIN, wallet.address));
+      returnWallets.push(
+        await this.userService.createUserNetworkRepository(
+          user.id.toString(),
+          BLOCKCHAIN,
+          wallet.address,
+        ),
+      );
     }
     return returnWallets;
   }

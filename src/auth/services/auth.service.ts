@@ -32,22 +32,6 @@ export class AuthService {
     return this.getAuthToken(ctx, ctx.user!);
   }
 
-  async register(
-    ctx: RequestContext,
-    input: RegisterInput,
-  ): Promise<RegisterOutput> {
-    this.logger.log(ctx, `${this.register.name} was called`);
-
-    // TODO : Setting default role as USER here. Will add option to change this later via ADMIN users.
-    input.roles = [ROLE.USER];
-    input.isAccountDisabled = false;
-
-    const registeredUser = await this.userService.createUser(ctx, input);
-    return plainToClass(RegisterOutput, registeredUser, {
-      excludeExtraneousValues: true,
-    });
-  }
-
   async refreshToken(ctx: RequestContext): Promise<AuthTokenOutput> {
     this.logger.log(ctx, `${this.refreshToken.name} was called`);
 

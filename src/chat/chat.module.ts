@@ -3,7 +3,9 @@ import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TwilioModule } from 'nestjs-twilio';
 
+import { CircleModule } from '../circle/circle.module';
 import { SharedModule } from '../shared/shared.module';
+import { UserModule } from '../user/user.module';
 import { ChatController } from './controllers/chat.controller';
 import { ChatService } from './services/chat.service';
 import { OpenAIService } from './services/open-ai.service';
@@ -20,6 +22,8 @@ import { OpenAIService } from './services/open-ai.service';
       inject: [ConfigService],
     }),
     CacheModule.register(),
+    UserModule,
+    CircleModule,
   ],
   providers: [ChatService, OpenAIService],
   controllers: [ChatController],
