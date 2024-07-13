@@ -5,6 +5,7 @@ import { TwilioService } from 'nestjs-twilio';
 
 import { CircleService } from '../../circle/services/circle.service';
 import { AppLogger } from '../../shared/logger/logger.service';
+import { UserNetworkRepository } from '../../user/repositories/user-network.repository';
 import { UserService } from '../../user/services/user.service';
 import { TransactionRepository } from '../../wire/repositories/transaction.repository';
 import {
@@ -19,7 +20,7 @@ import {
 import { TwilioMessage } from '../types/twilio.type';
 import { OpenAIService } from './open-ai.service';
 
-const SESSION_TTL = 60000 * 3;
+const SESSION_TTL = 60000 * 120;
 
 @Injectable()
 export class ChatService {
@@ -32,6 +33,7 @@ export class ChatService {
     private readonly userService: UserService,
     private readonly circleService: CircleService,
     private readonly transactionRepository: TransactionRepository,
+    private readonly userNetworkRepository: UserNetworkRepository,
     @Inject(CACHE_MANAGER) private cacheManager: Cache,
   ) {
     this.fromNumber = `whatsapp:${this.configService.get('twilio.phoneNumber')}`;
@@ -221,10 +223,9 @@ export class ChatService {
       const destinationUser = await this.userService.findUserByPhoneNumber(
         payload.contactPhone,
       );
-      console.log('destinationUser: ', destinationUser);
       const threadId = await this.getThreadId(number);
       const transaction = await this.transactionRepository.findOne({
-        relations: ['fromUser'],
+        relations: ['fromUser', 'toUser', 'userNetwork'],
         where: {
           threadId,
         },
@@ -232,6 +233,23 @@ export class ChatService {
 
       if (transaction) {
         transaction.amount = payload.amount;
+
+        const walletWithEnoughAmount = await this.getWalletWithBalance(
+          transaction.userNetwork.originalId,
+          payload.amount.toString(),
+        );
+
+        if (!walletWithEnoughAmount) {
+          await this.receiveMessage(
+            {
+              ...message,
+              Body: `I dont have enough balance to send that amount`,
+            },
+            `Notify to the user that he does not have enough balance to send the amount and ask to the user to deposit money and if he already did sent the JSON message to the user to confirm the transaction`,
+          );
+          return;
+        }
+
         if (destinationUser) {
           transaction.toUserId = destinationUser.id;
         }
@@ -256,6 +274,8 @@ export class ChatService {
         `Now you are sending directly the message to the contact to accept or reject the wire transfer, and replace the sender phone number with this one ${transaction?.fromUser.phone}`,
       );
     } else if (openIaAction.operation === Operation.CONFIRM_TRANSACTION) {
+      const destinationUser =
+        await this.userService.findUserByPhoneNumber(number);
       const transaction = await this.transactionRepository.findOne({
         where: {
           threadId,
@@ -263,9 +283,22 @@ export class ChatService {
       });
 
       if (transaction) {
+        if (destinationUser) {
+          transaction.toUserId = destinationUser.id;
+        }
         transaction.status = 'completed';
         this.transactionRepository.save(transaction);
       }
+
+      const finishTransaction = await this.transactionRepository.findOne({
+        relations: ['fromUser', 'toUser', 'userNetwork'],
+        where: {
+          threadId,
+        },
+      });
+
+      console.log(JSON.stringify(finishTransaction, null, 2));
+      this.clearCache(transaction?.fromUser?.phone?.toString() ?? '');
 
       await this.receiveMessage(
         {
@@ -274,6 +307,8 @@ export class ChatService {
         },
         `Notify to the user that the transaction was completed successfully`,
       );
+
+      this.processTransaction(finishTransaction?.id ?? 0);
     }
   }
 
@@ -287,5 +322,67 @@ export class ChatService {
     )) as string;
 
     return replyThreadId ?? initialThreadId ?? '';
+  }
+
+  async clearCache(number: string): Promise<void> {
+    console.log('clearing cache', number);
+    await this.cacheManager.del(`chat:thread:${number}`);
+    await this.cacheManager.del(`chat:thread:reply:${number}`);
+    await this.cacheManager.del(`chat:thread:${number}:userId`);
+  }
+
+  async processTransaction(transactionId: number) {
+    console.log({ transactionId });
+    const transaction = await this.transactionRepository.findOne({
+      relations: ['fromUser', 'toUser', 'userNetwork'],
+      where: {
+        id: transactionId,
+      },
+    });
+
+    if (!transaction) return;
+
+    const toUserNetwork = await this.userNetworkRepository.findOne({
+      where: {
+        userId: transaction.toUser.id.toString(),
+        networkId: transaction.userNetwork.networkId,
+      },
+    });
+
+    if (!toUserNetwork) return;
+
+    const walletId = transaction.userNetwork.originalId;
+    const amount = transaction.amount;
+    let tokenId = '';
+    const destinationAddress = toUserNetwork.address;
+
+    const walletWithEnoughAmount = await this.getWalletWithBalance(
+      walletId,
+      amount.toString(),
+    );
+
+    if (!walletWithEnoughAmount) {
+      throw new Error('Wallet does not have enough balance');
+    }
+
+    tokenId = walletWithEnoughAmount.token.id;
+
+    const response = await this.circleService.transferForSameNetwork(
+      walletId,
+      tokenId,
+      [amount.toString()],
+      destinationAddress,
+    );
+
+    console.log(JSON.stringify(response, null, 2));
+  }
+
+  async getWalletWithBalance(walletId: string, amount: string) {
+    const walletBalance =
+      await this.circleService.getBalanceOfWallets(walletId);
+
+    return walletBalance?.tokenBalances?.find(
+      (wallet) => Number(wallet.amount) >= Number(amount),
+    );
   }
 }

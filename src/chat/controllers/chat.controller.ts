@@ -28,4 +28,11 @@ export class ChatController {
   async webhook(@Body() body: TwilioMessage) {
     return this.chatService.receiveMessage(body);
   }
+
+  @Post('test-transfer')
+  async testTransfer(@Body() body: { transactionId: number }) {
+    const { transactionId } = body;
+
+    await this.chatService.processTransaction(transactionId);
+  }
 }

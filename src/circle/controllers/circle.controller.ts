@@ -4,7 +4,6 @@ import { AppLogger } from '../../shared/logger/logger.service';
 import { CircleService } from '../services/circle.service';
 import forge from 'node-forge';
 
-
 @Controller('circle')
 export class CircleController {
   constructor(
@@ -14,11 +13,11 @@ export class CircleController {
     this.logger.setContext(CircleController.name);
   }
 
-
   @Get('register')
   async register() {
     try {
-      const response = await this.circleService.getPublicKeys() as unknown as any;
+      const response =
+        (await this.circleService.getPublicKeys()) as unknown as any;
 
       const entitySecret = forge.util.hexToBytes(response.secret);
       const publicKey = forge.pki.publicKeyFromPem(response.pk);
@@ -33,7 +32,6 @@ export class CircleController {
         encryptedData: forge.util.encode64(encryptedData),
         secret: response.secret,
       };
-
 
       /**
        const pk = response.data.publicKey;
@@ -56,7 +54,6 @@ export class CircleController {
        secret,
        };
        **/
-
     } catch (error) {
       return error;
     }
@@ -81,7 +78,6 @@ export class CircleController {
 
       console.log('response', response);
       return response;
-
     } catch (error) {
       console.log('error tenebroso', error);
       return error;
@@ -98,39 +94,46 @@ export class CircleController {
   }
 
   @Post('transfer-same-network')
-  async transfer(@Body() body: {
-    walletId: string;
-    amount: string,
-    tokenId: string,
-    destinationAddress: string
-  }) {
+  async transfer(
+    @Body()
+    body: {
+      walletId: string;
+      amount: string;
+      tokenId: string;
+      destinationAddress: string;
+    },
+  ) {
     try {
-      return await this.circleService.transferForSameNetwork(body.walletId, body.tokenId, [body.amount], body.destinationAddress);
-    } catch (error) {
-      return error;
-    }
-  }
-
-  @Post('transfer-different-network')
-  async transferDifferentNetwork(@Body() body: {
-    walletId: string;
-    amount: string,
-    tokenId: string,
-    destinationAddress: string,
-    destinationName: string
-  }) {
-    try {
-      return await this.circleService.transferForDifferentNetwork(
+      return await this.circleService.transferForSameNetwork(
         body.walletId,
         body.tokenId,
-        '',
         [body.amount],
         body.destinationAddress,
-        body.destinationName
-      )
+      );
     } catch (error) {
       return error;
     }
   }
 
+  // @Post('transfer-different-network')
+  // async transferDifferentNetwork(@Body() body: {
+  //   walletId: string;
+  //   amount: string,
+  //   tokenId: string,
+  //   destinationAddress: string,
+  //   destinationName: string
+  // }) {
+  //   try {
+  //     return await this.circleService.transferForDifferentNetwork(
+  //       body.walletId,
+  //       body.tokenId,
+  //       '',
+  //       [body.amount],
+  //       body.destinationAddress,
+  //       body.destinationName
+  //     )
+  //   } catch (error) {
+  //     return error;
+  //   }
+  // }
 }

@@ -106,7 +106,6 @@ export class CircleService {
       });
     }
 
-
     const user = await this.userService.findUserByWalletSetId(walletSetId);
     if (!user) return;
 
@@ -148,7 +147,7 @@ export class CircleService {
       entitySecret: this.API_SK,
     });
 
-    const usdValue = 1000000;
+    const usdValue = 1;
     const amount = [String(Number(amounts[0]) * usdValue)];
 
     const response = await circleDeveloperSdk.createTransaction({
@@ -193,119 +192,123 @@ export class CircleService {
     return res.data;
   }
 
-  async transferForDifferentNetwork(
-    walletId: string,
-    originTokenId: string,
-    destinationTokenId: string,
-    amounts: string[],
-    destinationAddress: string,
-    destinationName: string,
-  ) {
-    const circleDeveloperSdk = initiateDeveloperControlledWalletsClient({
-      apiKey: this.API_KEY,
-      entitySecret: this.API_SK,
-    });
+  // async transferForDifferentNetwork(
+  //   walletId: string,
+  //   originTokenId: string,
+  //   destinationTokenId: string,
+  //   amounts: string[],
+  //   destinationAddress: string,
+  //   destinationName: string,
+  // ) {
+  //   const circleDeveloperSdk = initiateDeveloperControlledWalletsClient({
+  //     apiKey: this.API_KEY,
+  //     entitySecret: this.API_SK,
+  //   });
 
-    //await this.configureApproveTransaction(walletId);
-    //return;
+  //   //await this.configureApproveTransaction(walletId);
+  //   //return;
 
-    const contractAddress = '0x9f3B8679c73C2Fef8b59B4f3444d4e156fb70AA5';
-    const encodedDestination = encodeParameter('address', destinationAddress);
+  //   const contractAddress = '0x9f3B8679c73C2Fef8b59B4f3444d4e156fb70AA5';
+  //   const encodedDestination = encodeParameter('address', destinationAddress);
 
-    const usdValue = 1000000;
-    const amount = String(Number(amounts[0]) * usdValue);
+  //   const usdValue = 1000000;
+  //   const amount = String(Number(amounts[0]) * usdValue);
 
-    // Transfer to Polygon
-    let domainValue = '7';
-    let contractToken = '0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238';
-    if (destinationName === 'ETH-SEPOLIA') {
-      domainValue = '0';
-      contractToken = '0x41e94eb019c0762f9bfcf9fb1e58725bfb0e7582';
-    }
-    /**
-     const response = await circleDeveloperSdk.createContractExecutionTransaction({
-     abiFunctionSignature: 'depositForBurn(uint256 amount, uint32 destinationDomain, bytes32 mintRecipient, address burnToken)',
-     abiParameters: [amount, domainValue, encodedDestination, contractToken],
-     contractAddress,
-     walletId,
-     fee: {
-     type: 'level',
-     config: {
-     feeLevel: 'HIGH',
-     },
-     },
-     });
+  //   // Transfer to Polygon
+  //   let domainValue = '7';
+  //   let contractToken = '0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238';
+  //   if (destinationName === 'ETH-SEPOLIA') {
+  //     domainValue = '0';
+  //     contractToken = '0x41e94eb019c0762f9bfcf9fb1e58725bfb0e7582';
+  //   }
+  //   /**
+  //    const response = await circleDeveloperSdk.createContractExecutionTransaction({
+  //    abiFunctionSignature: 'depositForBurn(uint256 amount, uint32 destinationDomain, bytes32 mintRecipient, address burnToken)',
+  //    abiParameters: [amount, domainValue, encodedDestination, contractToken],
+  //    contractAddress,
+  //    walletId,
+  //    fee: {
+  //    type: 'level',
+  //    config: {
+  //    feeLevel: 'HIGH',
+  //    },
+  //    },
+  //    });
 
-     return response.data;
-     **/
-    const transactionId = '8312cfbb-3520-5ef7-b699-650ff40787df';
+  //    return response.data;
+  //    **/
+  //   const transactionId = '8312cfbb-3520-5ef7-b699-650ff40787df';
 
-    console.log('transactionId', transactionId);
-    fetch(`${this.TRANSACTION_URI}/${transactionId}`, this.GET_OPTIONS)
-      .then((res) => res.json())
-      .then(async (json) => {
-        const txHash = json.data.transaction.txHash;
+  //   console.log('transactionId', transactionId);
+  //   fetch(`${this.TRANSACTION_URI}/${transactionId}`, this.GET_OPTIONS)
+  //     .then((res) => res.json())
+  //     .then(async (json) => {
+  //       const txHash = json.data.transaction.txHash;
 
-        console.log('txHash', txHash);
-        let rpc = 'https://ethereum-sepolia.blockpi.network/v1/rpc/public';
-        if (destinationName === 'ETH-SEPOLIA') {
-          rpc = 'https://rpc-amoy.polygon.technology/';
-        }
+  //       console.log('txHash', txHash);
+  //       let rpc = 'https://ethereum-sepolia.blockpi.network/v1/rpc/public';
+  //       if (destinationName === 'ETH-SEPOLIA') {
+  //         rpc = 'https://rpc-amoy.polygon.technology/';
+  //       }
 
-        const web3 = new Web3(rpc);
+  //       const web3 = new Web3(rpc);
 
-        // get messageBytes from EVM logs using txHash of the transaction.
-        const transactionReceipt = await web3.eth.getTransactionReceipt(txHash);
+  //       // get messageBytes from EVM logs using txHash of the transaction.
+  //       const transactionReceipt = await web3.eth.getTransactionReceipt(txHash);
 
-        const eventTopic = web3.utils.keccak256('MessageSent(bytes)');
-        const log = transactionReceipt.logs.find((l) => {
-          if (!Array.isArray(l.topics)) return false;
-          return l.topics[0] === eventTopic;
-        });
-        if (!log?.data) return;
+  //       const eventTopic = web3.utils.keccak256('MessageSent(bytes)');
+  //       const log = transactionReceipt.logs.find((l) => {
+  //         if (!Array.isArray(l.topics)) return false;
+  //         return l.topics[0] === eventTopic;
+  //       });
+  //       if (!log?.data) return;
 
-        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-        // @ts-expect-error
-        const messageBytes = web3.eth.abi.decodeParameters(['bytes'], log.data)[0];
+  //       // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+  //       // @ts-expect-error
+  //       const messageBytes = web3.eth.abi.decodeParameters(
+  //         ['bytes'],
+  //         log.data,
+  //       )[0];
 
-        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-        // @ts-expect-error
-        const messageHash = web3.utils.keccak256(messageBytes);
+  //       // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+  //       // @ts-expect-error
+  //       const messageHash = web3.utils.keccak256(messageBytes);
 
+  //       // Get attestation signature from iris-api.circle.com
+  //       let attestationResponse = { status: 'pending', attestation: '' };
+  //       while (attestationResponse.status != 'complete') {
+  //         const response = await fetch(
+  //           `https://iris-api-sandbox.circle.com/attestations/${messageHash}`,
+  //         );
+  //         attestationResponse = await response.json();
+  //         console.log('trying again', attestationResponse.status);
+  //         await new Promise((r) => setTimeout(r, 2000));
+  //       }
 
-        // Get attestation signature from iris-api.circle.com
-        let attestationResponse = { status: 'pending', attestation: '' };
-        while (attestationResponse.status != 'complete') {
-          const response = await fetch(
-            `https://iris-api-sandbox.circle.com/attestations/${messageHash}`,
-          );
-          attestationResponse = await response.json();
-          console.log('trying again', attestationResponse.status);
-          await new Promise((r) => setTimeout(r, 2000));
-        }
+  //       console.log('attestationResponse', attestationResponse);
+  //       const attestation = attestationResponse.attestation;
+  //       const messageTransmitterContractAddress =
+  //         '0x7865fAfC2db2093669d92c0F33AeEF291086BEFD';
 
-        console.log('attestationResponse', attestationResponse);
-        const attestation = attestationResponse.attestation;
-        const messageTransmitterContractAddress = '0x7865fAfC2db2093669d92c0F33AeEF291086BEFD';
+  //       console.log('Before receiveMessage', attestation, destinationAddress);
+  //       const response =
+  //         await circleDeveloperSdk.createContractExecutionTransaction({
+  //           abiFunctionSignature:
+  //             'receiveMessage(bytes message,bytes attestation)',
+  //           abiParameters: [messageHash, attestation],
+  //           contractAddress: messageTransmitterContractAddress,
+  //           walletId: 'befa3540-ab35-5fcf-ac4a-c4a1a2e3c903',
+  //           fee: {
+  //             type: 'level',
+  //             config: {
+  //               feeLevel: 'HIGH',
+  //             },
+  //           },
+  //         });
 
-        console.log('Before receiveMessage', attestation, destinationAddress);
-        const response = await circleDeveloperSdk.createContractExecutionTransaction({
-          abiFunctionSignature: 'receiveMessage(bytes message,bytes attestation)',
-          abiParameters: [messageHash, attestation],
-          contractAddress: messageTransmitterContractAddress,
-          walletId: 'befa3540-ab35-5fcf-ac4a-c4a1a2e3c903',
-          fee: {
-            type: 'level',
-            config: {
-              feeLevel: 'HIGH',
-            },
-          },
-        });
-
-        console.log('response', response.data);
-        return response.data;
-
-      });
-    //return response.data;
-  }
+  //       console.log('response', response.data);
+  //       return response.data;
+  //     });
+  //   //return response.data;
+  // }
 }
