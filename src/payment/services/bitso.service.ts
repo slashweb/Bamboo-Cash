@@ -23,6 +23,7 @@ export class BitsoService {
     this.apiSecret = this.configService.get<string>('BITSO_API_SECRET') ?? '';
     const bitsoUrl =
       BITSO_ENDOIINTS[bitsoEnv as keyof typeof BitsoEnvironments];
+
     this.httpService.axiosRef.defaults.baseURL = bitsoUrl;
     this.httpService.axiosRef.interceptors.request.use((request) => {
       return this.signRequest(request);
@@ -91,6 +92,9 @@ export class BitsoService {
       }
     } catch (error) {
       console.error({ error });
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+      // @ts-expect-error
+      console.error({ error: error?.response?.data });
     }
   }
 

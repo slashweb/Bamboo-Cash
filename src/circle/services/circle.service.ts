@@ -93,7 +93,7 @@ export class CircleService {
 
     const ALL_BLOCKCHAINS = ['ETH', 'MATIC'] as Blockchain[];
 
-    console.log('all blockchains', ALL_BLOCKCHAINS, walletSetId)
+    console.log('all blockchains', ALL_BLOCKCHAINS, walletSetId);
     const responsesArray = [] as any;
     for (const blockchain of ALL_BLOCKCHAINS) {
       console.log('blockchain', blockchain);
@@ -144,6 +144,13 @@ export class CircleService {
     amounts: string[],
     destinationAddress: string,
   ) {
+    console.log({
+      walletId,
+      tokenId,
+      amounts,
+      destinationAddress,
+    });
+
     const circleDeveloperSdk = initiateDeveloperControlledWalletsClient({
       apiKey: this.API_KEY,
       entitySecret: this.API_SK,
