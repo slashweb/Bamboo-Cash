@@ -16,7 +16,7 @@ export class ChatController {
   @Post('message')
   async message(@Body() body: { to: string; message: string }) {
     const { to, message } = body;
-    return this.chatService.sendMessage(`whatsapp:${to}`, message);
+    return this.chatService.sendMessage(to, message);
   }
 
   @Get('status/:sid')

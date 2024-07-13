@@ -1,9 +1,10 @@
 import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
 
+import { Transaction } from '../../wire/entities/transaction.entity';
 import { BankAccount } from './bank-account.entity';
+import { Contact } from './contact.entity';
 import { UserNetwork } from './user-network.entity';
 import { WalletSet } from './wallet-set.entity';
-import { Contact } from './contact.entity';
 
 @Entity('users')
 export class User {
@@ -24,4 +25,10 @@ export class User {
 
   @OneToMany(() => Contact, (contact) => contact.owner)
   contacts: Contact[];
+
+  @OneToMany(() => Transaction, (transaction) => transaction.fromUser)
+  outTransactions: Transaction[];
+
+  @OneToMany(() => Transaction, (transaction) => transaction.toUser)
+  inTransactions: Transaction[];
 }

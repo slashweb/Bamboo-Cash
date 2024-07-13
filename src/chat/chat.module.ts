@@ -9,6 +9,7 @@ import { UserModule } from '../user/user.module';
 import { ChatController } from './controllers/chat.controller';
 import { ChatService } from './services/chat.service';
 import { OpenAIService } from './services/open-ai.service';
+import { WireModule } from '../wire/wire.module';
 
 @Module({
   imports: [
@@ -24,6 +25,7 @@ import { OpenAIService } from './services/open-ai.service';
     CacheModule.register(),
     UserModule,
     CircleModule,
+    WireModule,
   ],
   providers: [ChatService, OpenAIService],
   controllers: [ChatController],

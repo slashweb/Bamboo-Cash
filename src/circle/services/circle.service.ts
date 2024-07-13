@@ -1,12 +1,12 @@
+import { initiateDeveloperControlledWalletsClient } from '@circle-fin/developer-controlled-wallets';
+import { Blockchain } from '@circle-fin/smart-contract-platform';
 import { HttpService } from '@nestjs/axios';
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as crypto from 'crypto';
-import { initiateDeveloperControlledWalletsClient } from '@circle-fin/developer-controlled-wallets';
 
 import { AppLogger } from '../../shared/logger/logger.service';
 import { UserService } from '../../user/services/user.service';
-import { Blockchain } from '@circle-fin/smart-contract-platform';
 
 @Injectable()
 export class CircleService {
@@ -90,7 +90,7 @@ export class CircleService {
       entitySecret: this.API_SK,
     });
 
-    const BLOCKCHAINS = ['MATIC-AMOY', 'ETH-SEPOLIA', 'AVAX-FUJI', 'SOL-DEVNET'] as Blockchain[];
+    const BLOCKCHAINS = ['MATIC-AMOY'] as Blockchain[];
     const response = await circleDeveloperSdk.createWallets({
       accountType: 'SCA',
       blockchains: BLOCKCHAINS,
@@ -145,19 +145,19 @@ export class CircleService {
     console.log('tokenId: ', tokenId);
     console.log('amounts: ', amounts);
     console.log('destinationAddress: ', destinationAddress);
-    
+
     const response = await circleDeveloperSdk.createTransaction({
-        walletId,
-        tokenId,
-        destinationAddress,
-        amount: amounts,
-        fee: {
-          type: 'level',
-          config: {
-            feeLevel: 'LOW',
-          },
+      walletId,
+      tokenId,
+      destinationAddress,
+      amount: amounts,
+      fee: {
+        type: 'level',
+        config: {
+          feeLevel: 'LOW',
         },
-      });
+      },
+    });
 
     return response.data;
   }
