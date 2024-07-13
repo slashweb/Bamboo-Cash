@@ -6,6 +6,7 @@ import { initiateDeveloperControlledWalletsClient } from '@circle-fin/developer-
 
 import { AppLogger } from '../../shared/logger/logger.service';
 import { UserService } from '../../user/services/user.service';
+import { Blockchain } from '@circle-fin/smart-contract-platform';
 
 @Injectable()
 export class CircleService {
@@ -35,7 +36,7 @@ export class CircleService {
   }
 
   private readonly API_KEY;
-  private API_SK;
+  private readonly API_SK;
   private readonly GET_OPTIONS;
   private readonly POST_OPTIONS;
   private PK_URL = 'https://api.circle.com/v1/w3s/config/entity/publicKey';
@@ -89,10 +90,10 @@ export class CircleService {
       entitySecret: this.API_SK,
     });
 
-    const BLOCKCHAIN = 'MATIC-AMOY';
+    const BLOCKCHAINS = ['MATIC-AMOY', 'ETH-SEPOLIA', 'AVAX-FUJI', 'SOL-DEVNET'] as Blockchain[];
     const response = await circleDeveloperSdk.createWallets({
       accountType: 'SCA',
-      blockchains: [BLOCKCHAIN],
+      blockchains: BLOCKCHAINS,
       count: 1,
       walletSetId,
     });
@@ -109,11 +110,55 @@ export class CircleService {
       returnWallets.push(
         await this.userService.createUserNetworkRepository(
           user.id.toString(),
-          BLOCKCHAIN,
+          wallet.blockchain,
           wallet.address,
+          wallet.id,
         ),
       );
     }
-    return returnWallets;
+    return response.data;
+  }
+
+  async getBalanceOfWallets(id: string) {
+    const circleDeveloperSdk = initiateDeveloperControlledWalletsClient({
+      apiKey: this.API_KEY,
+      entitySecret: this.API_SK,
+    });
+    const response = await circleDeveloperSdk.getWalletTokenBalance({
+      id,
+    });
+    return response.data;
+  }
+
+  async transferForSameNetwork(
+    walletId: string,
+    tokenId: string,
+    amounts: string[],
+    destinationAddress: string,
+  ) {
+    const circleDeveloperSdk = initiateDeveloperControlledWalletsClient({
+      apiKey: this.API_KEY,
+      entitySecret: this.API_SK,
+    });
+
+    console.log('walletId: ', walletId);
+    console.log('tokenId: ', tokenId);
+    console.log('amounts: ', amounts);
+    console.log('destinationAddress: ', destinationAddress);
+    
+    const response = await circleDeveloperSdk.createTransaction({
+        walletId,
+        tokenId,
+        destinationAddress,
+        amount: amounts,
+        fee: {
+          type: 'level',
+          config: {
+            feeLevel: 'LOW',
+          },
+        },
+      });
+
+    return response.data;
   }
 }

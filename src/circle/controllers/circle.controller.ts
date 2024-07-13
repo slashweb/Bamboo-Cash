@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post } from '@nestjs/common';
 
 import { AppLogger } from '../../shared/logger/logger.service';
 import { CircleService } from '../services/circle.service';
@@ -84,6 +84,29 @@ export class CircleController {
 
     } catch (error) {
       console.log('error tenebroso', error);
+      return error;
+    }
+  }
+
+  @Get('wallets/balance/:id')
+  async getBalance(@Param('id') id: string) {
+    try {
+      return await this.circleService.getBalanceOfWallets(id);
+    } catch (error) {
+      return error;
+    }
+  }
+
+  @Post('transfer-same-network')
+  async transfer(@Body() body: {
+    walletId: string;
+    amount: string,
+    tokenId: string,
+    destinationAddress: string
+  }) {
+    try {
+      return await this.circleService.transferForSameNetwork(body.walletId, body.tokenId, [body.amount], body.destinationAddress);
+    } catch (error) {
       return error;
     }
   }

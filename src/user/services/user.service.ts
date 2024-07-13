@@ -68,6 +68,7 @@ export class UserService {
     userId: string,
     chainId: string,
     address: string,
+    originalId: string,
   ) {
     const network = await this.networkRepository.findOne({
       where: { chainId },
@@ -81,6 +82,7 @@ export class UserService {
       userId,
       networkId: String(network.id),
       address,
+      originalId,
     });
   }
 

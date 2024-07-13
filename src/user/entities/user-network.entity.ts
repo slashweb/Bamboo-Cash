@@ -26,6 +26,9 @@ export class UserNetwork {
   @Column({ length: 1024 })
   address: string;
 
+  @Column({ length: 1024 })
+  originalId: string;
+
   @ManyToOne(() => User, (user) => user.networks)
   @JoinColumn({ name: 'userId' })
   user: User;
