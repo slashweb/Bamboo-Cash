@@ -28,6 +28,8 @@ export default (): any => ({
   },
   circle: {
     secret: process.env.CIRCLE_SECRET,
+    ciphered: process.env.CIRCLE_CIPHERED,
+    sk: process.env.CIRCLE_SK,
   },
   twilio: {
     accountSid: process.env.TWILIO_ACCOUNT_SID,

@@ -7,12 +7,14 @@ import { CreateUserInput } from '../dtos/user-create-input.dto';
 import { UserOutput } from '../dtos/user-output.dto';
 import { User } from '../entities/user.entity';
 import { UserRepository } from '../repositories/user.repository';
+import { WalletSetRepository } from '../repositories/wallet-set.repository';
 
 @Injectable()
 export class UserService {
   constructor(
     private repository: UserRepository,
     private readonly logger: AppLogger,
+    private walletSetRepository: WalletSetRepository
   ) {
     this.logger.setContext(UserService.name);
   }
@@ -43,6 +45,9 @@ export class UserService {
     });
   }
 
+  async createWalletSet(userId: string, walletSetId: string) {
+    return await this.walletSetRepository.save({ userId, walletSetId });
+  }
   // async validateUsernamePassword(
   //   ctx: RequestContext,
   //   username: string,

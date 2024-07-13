@@ -1,12 +1,14 @@
 import {
+  Body,
   Controller,
-  Get,
+  Get, Post,
 } from '@nestjs/common';
 
 import { AppLogger } from '../../shared/logger/logger.service';
 import { CircleService } from '../services/circle.service';
 import forge from 'node-forge';
 import * as crypto from 'crypto';
+
 
 @Controller('circle')
 export class CircleController {
@@ -21,26 +23,59 @@ export class CircleController {
   @Get('register')
   async register() {
     try {
-      const response = await this.circleService.getPublicKeys();
-      console.log('respuesta tenebrosa', response)
+      const response = await this.circleService.getPublicKeys() as unknown as any;
 
-      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-      // @ts-expect-error
-      const pk = response.data.publicKey
+      const entitySecret = forge.util.hexToBytes(response.secret);
+      const publicKey = forge.pki.publicKeyFromPem(response.pk);
+      const encryptedData = publicKey.encrypt(entitySecret, 'RSA-OAEP', {
+        md: forge.md.sha256.create(),
+        mgf1: {
+          md: forge.md.sha256.create(),
+        },
+      });
 
-      const secret = crypto.randomBytes(32).toString('hex')
+      return {
+        encryptedData: forge.util.encode64(encryptedData),
+        secret: response.secret,
+      }
 
-      const entitySecret = forge.util.hexToBytes(secret)
-      const publicKey = forge.pki.publicKeyFromPem(pk)
-      const encryptedData = publicKey.encrypt(entitySecret, 'RSA-OAEP', { md: forge.md.sha256.create(), mgf1: { md: forge.md.sha256.create(), }, });
-      const encryptedDataHex = forge.util.encode64(encryptedData)
 
-      console.log('tenebrosamente', encryptedDataHex)
-      return encryptedDataHex
+      /**
+       const pk = response.data.publicKey;
+
+       const secret = crypto.randomBytes(32).toString('hex');
+
+
+       const entitySecret = forge.util.hexToBytes(secret);
+       const publicKey = forge.pki.publicKeyFromPem(pk);
+       const encryptedData = publicKey.encrypt(entitySecret, 'RSA-OAEP', {
+       md: forge.md.sha256.create(),
+       mgf1: {
+       md: forge.md.sha256.create(),
+       },
+       });
+       const base64EncryptedData = forge.util.encode64(encryptedData);
+
+       return {
+       encryptedData: base64EncryptedData,
+       secret,
+       };
+       **/
 
     } catch (error) {
-      console.log('tenebroso', error)
-      return error
+      return error;
+    }
+  }
+
+  @Post('wallet-set')
+  async walletSet(@Body() body: { userId: number}) {
+    try {
+      const walletSet = await this.circleService.createWalletSet(body.userId);
+
+      return walletSet;
+    } catch (error) {
+      console.log('error tenebroso', error);
+      return error;
     }
   }
 
