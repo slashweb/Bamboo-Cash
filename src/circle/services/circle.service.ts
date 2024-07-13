@@ -85,27 +85,32 @@ export class CircleService {
   }
 
   async createWallet(walletSetId: string) {
-    console.log('walletSetId: ', walletSetId);
-
     const circleDeveloperSdk = initiateDeveloperControlledWalletsClient({
       apiKey: this.API_KEY,
       entitySecret: this.API_SK,
     });
 
-    const BLOCKCHAINS = ['ETH-SEPOLIA'] as Blockchain[];
-    const response = await circleDeveloperSdk.createWallets({
-      accountType: 'SCA',
-      blockchains: BLOCKCHAINS,
-      count: 1,
-      walletSetId,
-    });
+    const ALL_BLOCKCHAINS = ['ETH-SEPOLIA', 'MATIC-AMOY'] as Blockchain[];
+
+    const responsesArray = [] as any;
+    for (const blockchain of ALL_BLOCKCHAINS) {
+      console.log('blockchain', blockchain);
+      const response = await circleDeveloperSdk.createWallets({
+        accountType: 'SCA',
+        blockchains: [blockchain],
+        count: 1,
+        walletSetId,
+      });
+      response?.data?.wallets.forEach((wallet) => {
+        responsesArray.push(wallet);
+      });
+    }
+
 
     const user = await this.userService.findUserByWalletSetId(walletSetId);
     if (!user) return;
 
-    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-    // @ts-expect-error
-    const wallets = response.data.wallets;
+    const wallets = responsesArray;
 
     const returnWallets = [];
     for (const wallet of wallets) {
@@ -118,7 +123,7 @@ export class CircleService {
         ),
       );
     }
-    return response.data;
+    return wallets;
   }
 
   async getBalanceOfWallets(id: string) {
