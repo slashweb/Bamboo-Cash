@@ -2,6 +2,7 @@ import { Body, Controller, Get, Param, Post } from '@nestjs/common';
 
 import { AppLogger } from '../../shared/logger/logger.service';
 import { ChatService } from '../services/chat.service';
+import { TwilioMessage } from '../types/twilio.type';
 
 @Controller('chat')
 export class ChatController {
@@ -24,15 +25,7 @@ export class ChatController {
   }
 
   @Post('webhook')
-  async webhook(@Body() body: any) {
-    console.log({
-      body,
-    });
-    return 'OK';
-  }
-
-  @Get('create-assistant')
-  async createAssistant() {
-    //return this.chatService.createAssistant();
+  async webhook(@Body() body: TwilioMessage) {
+    return this.chatService.receiveMessage(body);
   }
 }

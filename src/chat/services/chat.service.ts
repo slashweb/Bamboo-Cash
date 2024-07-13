@@ -3,8 +3,19 @@ import { Inject, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { TwilioService } from 'nestjs-twilio';
 
+import { CircleService } from '../../circle/services/circle.service';
 import { AppLogger } from '../../shared/logger/logger.service';
+import { UserService } from '../../user/services/user.service';
+import {
+  DepositType,
+  DepostAction,
+  OpenAIAction,
+  Operation,
+} from '../types/openai.type';
+import { TwilioMessage } from '../types/twilio.type';
 import { OpenAIService } from './open-ai.service';
+
+const SESSION_TTL = 60000 * 3;
 
 @Injectable()
 export class ChatService {
@@ -14,6 +25,8 @@ export class ChatService {
     private readonly configService: ConfigService,
     private readonly twilioService: TwilioService,
     private readonly openAIService: OpenAIService,
+    private readonly userService: UserService,
+    private readonly circleService: CircleService,
     @Inject(CACHE_MANAGER) private cacheManager: Cache,
   ) {
     this.fromNumber = `whatsapp:${this.configService.get('twilio.phoneNumber')}`;
@@ -35,9 +48,68 @@ export class ChatService {
     return message;
   }
 
-  async receiveMessage(body: any): Promise<any> {
-    const response = await this.openAIService.createThread();
+  async receiveMessage(message: TwilioMessage): Promise<any> {
+    const number = message.From.replace('whatsapp:', '');
+    let threadId = (await this.cacheManager.get(
+      `chat:thread:${number}`,
+    )) as string;
 
-    return response;
+    if (!threadId) {
+      const thread = await this.openAIService.createThread();
+      await this.cacheManager.set(
+        `chat:thread:${number}`,
+        thread.id,
+        SESSION_TTL,
+      );
+      threadId = thread.id;
+
+      let user = await this.userService.findUserByPhoneNumber(number);
+      if (!user) {
+        user = await this.userService.createUser(number);
+        if (user) {
+          const walletSet = await this.circleService.createWalletSet(user.id);
+          if (!walletSet) return;
+          const responseCreateWallet = await this.circleService.createWallet(
+            String(walletSet.walletSetId),
+          );
+          console.log('responseCreateWallet: ', responseCreateWallet);
+        }
+      }
+    }
+
+    const instructions = '';
+
+    const result = await this.openAIService.processMessage(
+      threadId,
+      message.Body,
+      instructions,
+    );
+
+    console.log('result: ', result);
+
+    try {
+      const openIaAction = JSON.parse(result) as OpenAIAction;
+      this.processActionMessage(openIaAction, message);
+    } catch (e) {
+      this.sendMessage(message.From, result);
+    }
+  }
+
+  async processActionMessage(
+    openIaAction: OpenAIAction,
+    message: TwilioMessage,
+  ) {
+    console.log('openIaAction: ', openIaAction);
+    if (openIaAction.operation === Operation.DEPOSIT) {
+      const payload = openIaAction.payload as DepostAction;
+
+      if (payload.type === DepositType.CRYPTO) {
+        const network = await this.userService.getNetworkByName(
+          payload.network,
+        );
+
+        console.log('network: ', network);
+      }
+    }
   }
 }

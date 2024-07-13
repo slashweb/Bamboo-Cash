@@ -10,4 +10,7 @@ export class Network {
 
   @Column()
   name: string;
+
+  @Column({ nullable: true })
+  address: string;
 }

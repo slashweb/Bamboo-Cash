@@ -38,5 +38,6 @@ export default (): any => ({
   },
   openai: {
     apiKey: process.env.OPENAI_API_KEY,
+    assistantId: process.env.OPENAI_ASSISTANT_ID,
   },
 });

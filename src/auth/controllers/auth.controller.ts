@@ -8,7 +8,7 @@ import {
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
-import { ApiOperation,ApiResponse, ApiTags } from '@nestjs/swagger';
+import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 
 import {
   BaseApiErrorResponse,
@@ -60,22 +60,6 @@ export class AuthController {
 
     const authToken = this.authService.login(ctx);
     return { data: authToken, meta: {} };
-  }
-
-  @Post('register')
-  @ApiOperation({
-    summary: 'User registration API',
-  })
-  @ApiResponse({
-    status: HttpStatus.CREATED,
-    type: SwaggerBaseApiResponse(RegisterOutput),
-  })
-  async registerLocal(
-    @ReqContext() ctx: RequestContext,
-    @Body() input: RegisterInput,
-  ): Promise<BaseApiResponse<RegisterOutput>> {
-    const registeredUser = await this.authService.register(ctx, input);
-    return { data: registeredUser, meta: {} };
   }
 
   @Post('refresh-token')

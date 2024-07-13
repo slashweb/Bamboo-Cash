@@ -6,10 +6,10 @@ import { RequestContext } from '../../shared/request-context/request-context.dto
 import { CreateUserInput } from '../dtos/user-create-input.dto';
 import { UserOutput } from '../dtos/user-output.dto';
 import { User } from '../entities/user.entity';
+import { NetworkRepository } from '../repositories/network.repository';
 import { UserRepository } from '../repositories/user.repository';
 import { UserNetworkRepository } from '../repositories/user-network.repository';
 import { WalletSetRepository } from '../repositories/wallet-set.repository';
-import { NetworkRepository } from '../repositories/network.repository';
 
 @Injectable()
 export class UserService {
@@ -34,20 +34,16 @@ export class UserService {
     });
   }
 
-  async createUser(
-    ctx: RequestContext,
-    input: CreateUserInput,
-  ): Promise<UserOutput> {
-    this.logger.log(ctx, `${this.createUser.name} was called`);
-
-    const user = plainToClass(User, input);
-
-    this.logger.log(ctx, `calling ${UserRepository.name}.saveUser`);
-    await this.repository.save(user);
-
-    return plainToClass(UserOutput, user, {
-      excludeExtraneousValues: true,
+  async createUser(phone: string): Promise<any> {
+    const user = await this.repository.save({
+      phone,
     });
+
+    return user;
+  }
+
+  async findUserByPhoneNumber(phone: string) {
+    return await this.repository.findOne({ where: { phone } });
   }
 
   async findUserByWalletSetId(walletSetId: string) {
@@ -68,9 +64,14 @@ export class UserService {
     return await this.walletSetRepository.save({ userId, walletSetId });
   }
 
-  async createUserNetworkRepository(userId: string, chainId: string, address: string) {
-
-    const network = await this.networkRepository.findOne({ where: { chainId } });
+  async createUserNetworkRepository(
+    userId: string,
+    chainId: string,
+    address: string,
+  ) {
+    const network = await this.networkRepository.findOne({
+      where: { chainId },
+    });
 
     if (!network) {
       throw new Error('Network not found');
@@ -81,6 +82,10 @@ export class UserService {
       networkId: String(network.id),
       address,
     });
+  }
+
+  async getNetworkByName(name: string) {
+    return await this.networkRepository.findOne({ where: { name } });
   }
 
   // async validateUsernamePassword(
