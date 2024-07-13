@@ -5,6 +5,7 @@ import { TwilioModule } from 'nestjs-twilio';
 import { SharedModule } from '../shared/shared.module';
 import { ChatController } from './controllers/chat.controller';
 import { ChatService } from './services/chat.service';
+import { OpenAIService } from './services/open-ai.service';
 
 @Module({
   imports: [
@@ -18,7 +19,7 @@ import { ChatService } from './services/chat.service';
       inject: [ConfigService],
     }),
   ],
-  providers: [ChatService],
+  providers: [ChatService, OpenAIService],
   controllers: [ChatController],
   exports: [ChatService],
 })

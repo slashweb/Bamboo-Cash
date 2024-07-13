@@ -30,4 +30,9 @@ export class ChatController {
     });
     return 'OK';
   }
+
+  @Get('create-assistant')
+  async createAssistant() {
+    return this.chatService.createAssistant();
+  }
 }
