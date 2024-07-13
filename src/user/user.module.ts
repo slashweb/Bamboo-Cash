@@ -6,10 +6,12 @@ import { CircleModule } from '../circle/circle.module';
 import { SharedModule } from '../shared/shared.module';
 import { UserController } from './controllers/user.controller';
 import { BankAccount } from './entities/bank-account.entity';
+import { Contact } from './entities/contact.entity';
 import { Network } from './entities/network.entity';
 import { User } from './entities/user.entity';
 import { UserNetwork } from './entities/user-network.entity';
 import { WalletSet } from './entities/wallet-set.entity';
+import { ContactRepository } from './repositories/contact.repository';
 import { NetworkRepository } from './repositories/network.repository';
 import { UserRepository } from './repositories/user.repository';
 import { UserNetworkRepository } from './repositories/user-network.repository';
@@ -26,6 +28,7 @@ import { UserAclService } from './services/user-acl.service';
       Network,
       BankAccount,
       WalletSet,
+      Contact,
     ]),
   ],
   providers: [
@@ -36,6 +39,7 @@ import { UserAclService } from './services/user-acl.service';
     UserRepository,
     WalletSetRepository,
     UserNetworkRepository,
+    ContactRepository,
   ],
   controllers: [UserController],
   exports: [UserService],

@@ -3,6 +3,7 @@ import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
 import { BankAccount } from './bank-account.entity';
 import { UserNetwork } from './user-network.entity';
 import { WalletSet } from './wallet-set.entity';
+import { Contact } from './contact.entity';
 
 @Entity('users')
 export class User {
@@ -20,4 +21,7 @@ export class User {
 
   @OneToMany(() => WalletSet, (walletSet) => walletSet.user)
   walletSets: WalletSet[];
+
+  @OneToMany(() => Contact, (contact) => contact.owner)
+  contacts: Contact[];
 }

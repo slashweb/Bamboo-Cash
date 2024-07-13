@@ -27,7 +27,7 @@ export class OpenAIService {
   async processMessage(
     threadId: string,
     message: string,
-    instructions: string,
+    instructions?: string,
   ): Promise<any> {
     await this.addMessageToThread(threadId, message);
     await this.createAndPoll(threadId, instructions);
@@ -43,7 +43,7 @@ export class OpenAIService {
     });
   }
 
-  async createAndPoll(threadId: string, instructions: string): Promise<any> {
+  async createAndPoll(threadId: string, instructions?: string): Promise<any> {
     const run = await this.openIaClient.beta.threads.runs.createAndPoll(
       threadId,
       {
