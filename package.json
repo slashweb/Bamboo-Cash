@@ -76,6 +76,7 @@
     "swagger-ui-express": "5.0.1",
     "typeorm": "^0.3.20",
     "uuid": "^10.0.0",
+    "web3": "^4.11.0",
     "winston": "^3.13.0"
   },
   "devDependencies": {
