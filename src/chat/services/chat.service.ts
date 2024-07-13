@@ -6,6 +6,7 @@ import { TwilioService } from 'nestjs-twilio';
 import { CircleService } from '../../circle/services/circle.service';
 import { AppLogger } from '../../shared/logger/logger.service';
 import { UserService } from '../../user/services/user.service';
+import { TransactionRepository } from '../../wire/repositories/transaction.repository';
 import {
   CreateContactAction,
   DepositType,
@@ -30,6 +31,7 @@ export class ChatService {
     private readonly openAIService: OpenAIService,
     private readonly userService: UserService,
     private readonly circleService: CircleService,
+    private readonly transactionRepository: TransactionRepository,
     @Inject(CACHE_MANAGER) private cacheManager: Cache,
   ) {
     this.fromNumber = `whatsapp:${this.configService.get('twilio.phoneNumber')}`;
@@ -47,6 +49,25 @@ export class ChatService {
     return response;
   }
 
+  async sendMessageWithButtons(
+    to: string,
+    message: string,
+    buttons: { label: string; action: string }[],
+  ): Promise<any> {
+    const response = await this.twilioService.client.messages.create({
+      body: message,
+      from: this.fromNumber,
+      to: `whatsapp:${to}`,
+      mediaUrl: buttons.map((button) => {
+        return `https://api.twilio.com/2010-04-01/Accounts/${this.configService.get(
+          'twilio.accountSid',
+        )}/Messages/${button.action}/Media`;
+      }),
+    });
+
+    return response;
+  }
+
   async trackMessageStatus(sid: string): Promise<any> {
     const message = await this.twilioService.client.messages(sid).fetch();
     return message;
@@ -57,9 +78,7 @@ export class ChatService {
     instructions?: string,
   ): Promise<any> {
     const number = message.From.replace('whatsapp:', '');
-    let threadId = (await this.cacheManager.get(
-      `chat:thread:${number}`,
-    )) as string;
+    let threadId = await this.getThreadId(number);
 
     if (!threadId) {
       const thread = await this.openAIService.createThread();
@@ -69,26 +88,26 @@ export class ChatService {
         SESSION_TTL,
       );
       threadId = thread.id;
+    }
 
-      let user = await this.userService.findUserByPhoneNumber(number);
-      if (!user) {
-        user = await this.userService.createUser(number);
-        if (user) {
-          const walletSet = await this.circleService.createWalletSet(user.id);
-          if (!walletSet) return;
-          const responseCreateWallet = await this.circleService.createWallet(
-            String(walletSet.walletSetId),
-          );
-          console.log('responseCreateWallet: ', responseCreateWallet);
-        }
-      }
+    let user = await this.userService.findUserByPhoneNumber(number);
+    if (!user) {
+      user = await this.userService.createUser(number);
       if (user) {
-        await this.cacheManager.set(
-          `chat:thread:${number}:userId`,
-          user.id,
-          SESSION_TTL,
+        const walletSet = await this.circleService.createWalletSet(user.id);
+        if (!walletSet) return;
+        const responseCreateWallet = await this.circleService.createWallet(
+          String(walletSet.walletSetId),
         );
+        console.log('responseCreateWallet: ', responseCreateWallet);
       }
+    }
+    if (user) {
+      await this.cacheManager.set(
+        `chat:thread:${number}:userId`,
+        user.id,
+        SESSION_TTL,
+      );
     }
 
     const result = await this.openAIService.processMessage(
@@ -96,8 +115,6 @@ export class ChatService {
       message.Body,
       instructions,
     );
-
-    console.log('result: ', result);
 
     try {
       const openIaAction = JSON.parse(result) as OpenAIAction;
@@ -113,31 +130,33 @@ export class ChatService {
     message: TwilioMessage,
   ) {
     const number = message.From.replace('whatsapp:', '');
+    const threadId = await this.getThreadId(number);
     const userId =
       ((await this.cacheManager.get(
         `chat:thread:${number}:userId`,
       )) as number) ?? 0;
-    console.log('openIaAction: ', openIaAction);
     if (openIaAction.operation === Operation.DEPOSIT) {
       const payload = openIaAction.payload as DepostAction;
 
-      if (payload.type === DepositType.CRYPTO) {
-        const network = await this.userService.getNetworkByName(
-          payload.network,
-        );
+      const userNetworks =
+        await this.userService.findUserNetworksByUserId(userId);
 
-        if (!network) {
-          return this.sendMessage(message.From, 'Invalid network');
-        }
+      const userNetwork = userNetworks.find(
+        (network) => network.network.name === payload.network,
+      );
 
-        this.receiveMessage(
-          {
-            ...message,
-            Body: 'Give me the address to send the crypto',
-          },
-          `Indicate to the user that he needs to send the crypto to the following address: ${network.address} and tell him the session is over`,
-        );
-      }
+      const result = await this.transactionRepository.save({
+        threadId: threadId,
+        fromUserId: userId,
+        userNetworkId: userNetwork?.id,
+      });
+
+      console.log('result: ', result);
+
+      this.receiveMessage({
+        ...message,
+        Body: 'Done',
+      });
     } else if (openIaAction.operation === Operation.SEARCH_CONTACT) {
       const payload = openIaAction.payload as SearchContactAction;
 
@@ -153,11 +172,42 @@ export class ChatService {
           },
           `Indicate to the user he does not have that contact created, he needs either the phone or the name that was missing of the contact to create`,
         );
+      } else {
+        this.receiveMessage(
+          {
+            ...message,
+            Body: `I found the contact. This are the datails: name: ${contact.name}, phone: ${contact.phone}`,
+          },
+          `Indicate to the user that the contact was found successfully and ask for the amount to send in USD`,
+        );
+
+        const threadId = (await this.cacheManager.get(
+          `chat:thread:${number}`,
+        )) as string;
+        await this.cacheManager.set(
+          `chat:thread:reply:${contact.phone}`,
+          threadId,
+          SESSION_TTL,
+        );
       }
     } else if (openIaAction.operation === Operation.CREATE_CONTACT) {
       const payload = openIaAction.payload as CreateContactAction;
 
-      await this.userService.createContact(userId, payload.name, payload.phone);
+      const contact = await this.userService.createContact(
+        userId,
+        payload.name,
+        payload.phone,
+      );
+
+      const threadId = (await this.cacheManager.get(
+        `chat:thread:${number}`,
+      )) as string;
+      await this.cacheManager.set(
+        `chat:thread:reply:${contact.phone}`,
+        threadId,
+        SESSION_TTL,
+      );
+
       this.receiveMessage(
         {
           ...message,
@@ -168,10 +218,74 @@ export class ChatService {
     } else if (openIaAction.operation === Operation.SEND_MONEY) {
       const payload = openIaAction.payload as SendMoneyAction;
 
-      this.sendMessage(
+      const destinationUser = await this.userService.findUserByPhoneNumber(
         payload.contactPhone,
-        `Hello {${payload.contactName}}, You have a wire transfer pending, reply this message to start checking the details`,
+      );
+      console.log('destinationUser: ', destinationUser);
+      const threadId = await this.getThreadId(number);
+      const transaction = await this.transactionRepository.findOne({
+        relations: ['fromUser'],
+        where: {
+          threadId,
+        },
+      });
+
+      if (transaction) {
+        transaction.amount = payload.amount;
+        if (destinationUser) {
+          transaction.toUserId = destinationUser.id;
+        }
+        transaction.status = 'receiver_notified';
+        this.transactionRepository.save(transaction);
+      }
+
+      await this.receiveMessage(
+        {
+          ...message,
+          Body: `I just accepted`,
+        },
+        `Notify to the user that we are going to contact to the destination user directly`,
+      );
+
+      await this.receiveMessage(
+        {
+          ...message,
+          From: payload.contactPhone,
+          Body: `Hello ${payload.contactName}, You have a wire transfer pending. Select an option: 1. Accept Wire 2. Reject`,
+        },
+        `Now you are sending directly the message to the contact to accept or reject the wire transfer, and replace the sender phone number with this one ${transaction?.fromUser.phone}`,
+      );
+    } else if (openIaAction.operation === Operation.CONFIRM_TRANSACTION) {
+      const transaction = await this.transactionRepository.findOne({
+        where: {
+          threadId,
+        },
+      });
+
+      if (transaction) {
+        transaction.status = 'completed';
+        this.transactionRepository.save(transaction);
+      }
+
+      await this.receiveMessage(
+        {
+          ...message,
+          Body: `I just confirmed`,
+        },
+        `Notify to the user that the transaction was completed successfully`,
       );
     }
+  }
+
+  async getThreadId(number: string): Promise<string> {
+    const initialThreadId = (await this.cacheManager.get(
+      `chat:thread:${number}`,
+    )) as string;
+
+    const replyThreadId = (await this.cacheManager.get(
+      `chat:thread:reply:${number}`,
+    )) as string;
+
+    return replyThreadId ?? initialThreadId ?? '';
   }
 }

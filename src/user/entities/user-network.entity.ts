@@ -3,9 +3,11 @@ import {
   Entity,
   JoinColumn,
   ManyToOne,
+  OneToMany,
   PrimaryGeneratedColumn,
 } from 'typeorm';
 
+import { Transaction } from '../../wire/entities/transaction.entity';
 import { Network } from './network.entity';
 import { User } from './user.entity';
 
@@ -36,4 +38,7 @@ export class UserNetwork {
   @ManyToOne(() => Network, (network) => network.id)
   @JoinColumn({ name: 'networkId' })
   network: Network;
+
+  @OneToMany(() => Transaction, (transaction) => transaction)
+  transactions: Transaction[];
 }

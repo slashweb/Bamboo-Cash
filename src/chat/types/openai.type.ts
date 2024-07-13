@@ -1,8 +1,10 @@
 export enum Operation {
   DEPOSIT = 'deposit',
+  SEARCH_USER_NETWORK = 'search_user_network',
   SEARCH_CONTACT = 'search_contact',
   CREATE_CONTACT = 'create_contact',
   SEND_MONEY = 'send_money',
+  CONFIRM_TRANSACTION = 'confirm_transaction',
 }
 
 export enum DepositType {
@@ -41,4 +43,7 @@ export type SendMoneyAction = {
   amount: number;
   contactPhone: string;
   contactName: string;
+};
+export type ConfirmTransactionAction = {
+  threadId: string;
 };

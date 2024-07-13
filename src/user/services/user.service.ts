@@ -104,6 +104,13 @@ export class UserService {
     });
   }
 
+  async findUserNetworksByUserId(userId: number) {
+    return this.userNetworkRepository.find({
+      relations: ['network'],
+      where: { userId: userId.toString() },
+    });
+  }
+
   // async validateUsernamePassword(
   //   ctx: RequestContext,
   //   username: string,

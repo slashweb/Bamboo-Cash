@@ -6,10 +6,11 @@ import { TwilioModule } from 'nestjs-twilio';
 import { CircleModule } from '../circle/circle.module';
 import { SharedModule } from '../shared/shared.module';
 import { UserModule } from '../user/user.module';
+import { TransactionRepository } from '../wire/repositories/transaction.repository';
+import { WireModule } from '../wire/wire.module';
 import { ChatController } from './controllers/chat.controller';
 import { ChatService } from './services/chat.service';
 import { OpenAIService } from './services/open-ai.service';
-import { WireModule } from '../wire/wire.module';
 
 @Module({
   imports: [
@@ -27,7 +28,7 @@ import { WireModule } from '../wire/wire.module';
     CircleModule,
     WireModule,
   ],
-  providers: [ChatService, OpenAIService],
+  providers: [ChatService, OpenAIService, TransactionRepository],
   controllers: [ChatController],
   exports: [ChatService],
 })
