@@ -20,8 +20,11 @@ export class UserNetwork {
   @Column({ name: 'networkId' })
   networkId: string;
 
-  @Column()
+  @Column({ default: '0' })
   balance: string;
+
+  @Column({ length: 1024 })
+  address: string;
 
   @ManyToOne(() => User, (user) => user.networks)
   @JoinColumn({ name: 'userId' })

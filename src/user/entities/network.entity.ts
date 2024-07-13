@@ -6,7 +6,7 @@ export class Network {
   id: number;
 
   @Column()
-  chanId: string;
+  chainId: string;
 
   @Column()
   name: string;

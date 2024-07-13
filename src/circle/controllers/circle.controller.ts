@@ -1,13 +1,8 @@
-import {
-  Body,
-  Controller,
-  Get, Post,
-} from '@nestjs/common';
+import { Body, Controller, Get, Post } from '@nestjs/common';
 
 import { AppLogger } from '../../shared/logger/logger.service';
 import { CircleService } from '../services/circle.service';
 import forge from 'node-forge';
-import * as crypto from 'crypto';
 
 
 @Controller('circle')
@@ -37,7 +32,7 @@ export class CircleController {
       return {
         encryptedData: forge.util.encode64(encryptedData),
         secret: response.secret,
-      }
+      };
 
 
       /**
@@ -68,11 +63,25 @@ export class CircleController {
   }
 
   @Post('wallet-set')
-  async walletSet(@Body() body: { userId: number}) {
+  async walletSet(@Body() body: { userId: number }) {
     try {
       const walletSet = await this.circleService.createWalletSet(body.userId);
 
       return walletSet;
+    } catch (error) {
+      console.log('error tenebroso', error);
+      return error;
+    }
+  }
+
+  @Post('wallets')
+  async wallets(@Body() body: { walletSetId: string }) {
+    try {
+      const response = await this.circleService.createWallet(body.walletSetId);
+
+      console.log('response', response);
+      return response;
+
     } catch (error) {
       console.log('error tenebroso', error);
       return error;

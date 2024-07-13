@@ -2,8 +2,6 @@ import { HttpService } from '@nestjs/axios';
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as crypto from 'crypto';
-import fetch from 'node-fetch';
-import { v4 as uuidv4 } from 'uuid';
 import { initiateDeveloperControlledWalletsClient } from '@circle-fin/developer-controlled-wallets';
 
 import { AppLogger } from '../../shared/logger/logger.service';
@@ -79,9 +77,36 @@ export class CircleService {
     // @ts-expect-error
     const walletSetId = response.data.walletSet.id;
 
-    const walletSet = await this.userService.createWalletSet(userId.toString(), walletSetId);
-
-    return walletSet;
+    return await this.userService.createWalletSet(userId.toString(), walletSetId);
   }
 
+  async createWallet(walletSetId: string) {
+
+    const circleDeveloperSdk = initiateDeveloperControlledWalletsClient({
+      apiKey: this.API_KEY,
+      entitySecret: this.API_SK,
+    });
+
+    const BLOCKCHAIN = 'MATIC-AMOY';
+    const response = await circleDeveloperSdk.createWallets({
+      accountType: 'SCA',
+      blockchains: [BLOCKCHAIN],
+      count: 1,
+      walletSetId,
+    });
+
+    const user = await this.userService.findUserByWalletSetId(walletSetId);
+
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+    // @ts-expect-error
+    const wallets = response.data.wallets;
+
+    const returnWallets = [];
+    for (const wallet of wallets) {
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+      // @ts-expect-error
+      returnWallets.push(await this.userService.createUserNetworkRepository(user.id.toString(), BLOCKCHAIN, wallet.address));
+    }
+    return returnWallets;
+  }
 }

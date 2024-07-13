@@ -13,14 +13,17 @@ import { UserService } from './services/user.service';
 import { UserAclService } from './services/user-acl.service';
 import { WalletSet } from './entities/wallet-set.entity';
 import { WalletSetRepository } from './repositories/wallet-set.repository';
+import { UserNetworkRepository } from './repositories/user-network.repository';
+import { NetworkRepository } from './repositories/network.repository';
 
 @Module({
   imports: [
     SharedModule,
     TypeOrmModule.forFeature([User, UserNetwork, Network, BankAccount, WalletSet]),
   ],
-  providers: [UserService, JwtAuthStrategy, UserAclService, UserRepository, WalletSetRepository],
+  providers: [UserService, JwtAuthStrategy, NetworkRepository, UserAclService, UserRepository, WalletSetRepository, UserNetworkRepository],
   controllers: [UserController],
   exports: [UserService],
 })
-export class UserModule {}
+export class UserModule {
+}

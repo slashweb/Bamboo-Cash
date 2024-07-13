@@ -7,14 +7,18 @@ import { CreateUserInput } from '../dtos/user-create-input.dto';
 import { UserOutput } from '../dtos/user-output.dto';
 import { User } from '../entities/user.entity';
 import { UserRepository } from '../repositories/user.repository';
+import { UserNetworkRepository } from '../repositories/user-network.repository';
 import { WalletSetRepository } from '../repositories/wallet-set.repository';
+import { NetworkRepository } from '../repositories/network.repository';
 
 @Injectable()
 export class UserService {
   constructor(
     private repository: UserRepository,
     private readonly logger: AppLogger,
-    private walletSetRepository: WalletSetRepository
+    private walletSetRepository: WalletSetRepository,
+    private userNetworkRepository: UserNetworkRepository,
+    private networkRepository: NetworkRepository,
   ) {
     this.logger.setContext(UserService.name);
   }
@@ -29,6 +33,7 @@ export class UserService {
       excludeExtraneousValues: true,
     });
   }
+
   async createUser(
     ctx: RequestContext,
     input: CreateUserInput,
@@ -45,9 +50,39 @@ export class UserService {
     });
   }
 
+  async findUserByWalletSetId(walletSetId: string) {
+    const walletSet = await this.walletSetRepository.findOne({
+      where: { walletSetId },
+    });
+
+    if (!walletSet) {
+      return null;
+    }
+
+    return await this.repository.findOne({
+      where: { id: Number(walletSet.userId) },
+    });
+  }
+
   async createWalletSet(userId: string, walletSetId: string) {
     return await this.walletSetRepository.save({ userId, walletSetId });
   }
+
+  async createUserNetworkRepository(userId: string, chainId: string, address: string) {
+
+    const network = await this.networkRepository.findOne({ where: { chainId } });
+
+    if (!network) {
+      throw new Error('Network not found');
+    }
+
+    return await this.userNetworkRepository.save({
+      userId,
+      networkId: String(network.id),
+      address,
+    });
+  }
+
   // async validateUsernamePassword(
   //   ctx: RequestContext,
   //   username: string,
