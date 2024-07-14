@@ -388,7 +388,7 @@ export class ChatService {
           From: payload.contactPhone,
           Body: `Hello ${payload.contactName}, You have a wire transfer pending. Select an option: 1. Accept Wire 2. Reject`,
         },
-        `Now you are sending directly the message to the contact to accept or reject the wire transfer, and replace the sender phone number with this one ${transaction?.fromUser.phone}  and receiver phone number with this one ${transaction?.toUser.phone}`,
+        `Now you are sending directly the message to the contact to accept or reject the wire transfer, and replace the sender phone number with this one ${transaction?.fromUser.phone}}`,
       );
     } else if (openIaAction.operation === Operation.CONFIRM_TRANSACTION) {
       const payload = openIaAction.payload as ConfirmTransactionAction;
