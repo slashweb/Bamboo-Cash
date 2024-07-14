@@ -523,7 +523,7 @@ export class ChatService {
     const walletId = transaction.userNetwork.originalId;
     const amount = transaction.amount;
     let tokenId = '';
-    let destinationAddress = toUserNetwork.address;
+    const destinationAddress = toUserNetwork.address;
 
     const walletWithEnoughAmount = await this.getWalletWithBalance(
       walletId,
@@ -536,8 +536,8 @@ export class ChatService {
 
     tokenId = walletWithEnoughAmount.token.id;
 
-    destinationAddress =
-      this.configService.get<string>('bitso.walletAddressId') ?? '';
+    // destinationAddress =
+    //   this.configService.get<string>('bitso.walletAddressId') ?? '';
 
     const response = await this.circleService.transferForSameNetwork(
       walletId,
