@@ -20,6 +20,7 @@ import {
   SearchContactAction,
   SendMoneyAction,
   SwapToApeCoinAction,
+  WithdrawAction,
 } from '../types/openai.type';
 import { TwilioMessage } from '../types/twilio.type';
 import { OpenAIService } from './open-ai.service';
@@ -204,6 +205,46 @@ export class ChatService {
           `Notify to the user that he has the transaction history and send the history to the user in a pretty way and in the beginning of the message add the message "Proccesed with *BLOCKSCOUT*"`,
         );
       }
+    } else if (openIaAction.operation === Operation.WITHDRAW) {
+      const payload = openIaAction.payload as WithdrawAction;
+
+      console.log('payload: ', payload);
+
+      const userNetworks =
+        await this.userService.findUserNetworksByUserId(userId);
+      const userNetwork = userNetworks.find(
+        (network) => network.network.name === 'Polygon',
+      );
+
+      if (!userNetwork) return;
+
+      const walletId = userNetwork.originalId;
+
+      const walletWithEnoughAmount = await this.getWalletWithBalance(
+        walletId,
+        payload.amount.toString(),
+      );
+
+      if (!walletWithEnoughAmount) {
+        throw new Error('Wallet does not have enough balance');
+      }
+
+      const tokenId = walletWithEnoughAmount.token.id;
+
+      await this.circleService.transferForSameNetwork(
+        walletId,
+        tokenId,
+        [payload.amount.toString()],
+        payload.addressId,
+      );
+
+      await this.receiveMessage(
+        {
+          ...message,
+          Body: 'Done',
+        },
+        `Notify to the user that the withdraw was done successfully`,
+      );
     } else if (openIaAction.operation === Operation.DEPOSIT) {
       const payload = openIaAction.payload as DepostAction;
 

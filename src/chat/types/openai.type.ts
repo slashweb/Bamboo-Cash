@@ -1,5 +1,6 @@
 export enum Operation {
   CHECK_BALANCE = 'check_balance',
+  WITHDRAW = 'withdraw',
   OPERATION_HISTORY = 'operation_history',
   DEPOSIT = 'deposit',
   SEARCH_USER_NETWORK = 'search_user_network',
@@ -54,4 +55,9 @@ export type ConfirmTransactionAction = {
 
 export type SwapToApeCoinAction = {
   walletId: string;
+};
+
+export type WithdrawAction = {
+  amount: number;
+  addressId: string;
 };
