@@ -88,6 +88,8 @@ export class ChatService {
     const number = message.From.replace('whatsapp:', '');
     let threadId = await this.getThreadId(number);
 
+    console.log('message: ', message);
+
     if (!threadId) {
       const thread = await this.openAIService.createThread();
       await this.cacheManager.set(
@@ -126,8 +128,11 @@ export class ChatService {
 
     try {
       const openIaAction = JSON.parse(result) as OpenAIAction;
+      console.log('openIaAction: ', JSON.stringify(openIaAction, null, 2));
       this.processActionMessage(openIaAction, message);
     } catch (e) {
+      console.log('error: ', e);
+
       const onlyPhoneNumber = message.From.replace('whatsapp:', '');
       this.sendMessage(onlyPhoneNumber, result);
     }
@@ -143,6 +148,8 @@ export class ChatService {
       ((await this.cacheManager.get(
         `chat:thread:${number}:userId`,
       )) as number) ?? 0;
+
+    console.log('openIaAction: ', openIaAction);
 
     if (openIaAction.operation === Operation.CHECK_BALANCE) {
       const userNetworks =
@@ -173,8 +180,7 @@ export class ChatService {
         },
         `Send the user the balance of the user in all the networks and end the conversation in a list of the balances`,
       );
-    }
-    if (openIaAction.operation === Operation.OPERATION_HISTORY) {
+    } else if (openIaAction.operation === Operation.OPERATION_HISTORY) {
       const userNetworks =
         await this.userService.findUserNetworksByUserId(userId);
 
@@ -254,6 +260,8 @@ export class ChatService {
       const userNetwork = userNetworks.find(
         (network) => network.network.name === payload.network,
       );
+
+      console.log('creating transaction');
 
       const result = await this.transactionRepository.save({
         threadId: threadId,
