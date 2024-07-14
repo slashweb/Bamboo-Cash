@@ -426,7 +426,7 @@ export class ChatService {
         `Notify to the user that the transaction was sent and the provider BITSO will process the wire to the destination user`,
       );
 
-      //await this.processTransaction(finishTransaction?.id ?? 0);
+      await this.processTransaction(finishTransaction?.id ?? 0);
 
       if (payload.type === DepositType.BANK) {
         const contact = await this.userService.findContactByFilter({
