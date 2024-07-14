@@ -180,7 +180,8 @@ export class ChatService {
         },
         `Send the user the balance of the user in all the networks and end the conversation in a list of the balances`,
       );
-    } else if (openIaAction.operation === Operation.OPERATION_HISTORY) {
+    }
+    if (openIaAction.operation === Operation.OPERATION_HISTORY) {
       const userNetworks =
         await this.userService.findUserNetworksByUserId(userId);
 
