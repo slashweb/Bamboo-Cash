@@ -23,6 +23,7 @@ export class BitsoService {
     this.apiSecret = this.configService.get<string>('BITSO_API_SECRET') ?? '';
     const bitsoUrl =
       BITSO_ENDOIINTS[bitsoEnv as keyof typeof BitsoEnvironments];
+
     this.httpService.axiosRef.defaults.baseURL = bitsoUrl;
     this.httpService.axiosRef.interceptors.request.use((request) => {
       return this.signRequest(request);
@@ -73,17 +74,29 @@ export class BitsoService {
   ) {
     try {
       const quoteResult = await this.httpService
-        .post('/currency_conversions', {
-          from_currency: fromCurrency,
-          to_currency: toCurrency,
-          spend_amount: spendAmount,
-        })
+        .post(
+          '/currency_conversions',
+          {
+            from_currency: fromCurrency,
+            to_currency: toCurrency,
+            spend_amount: spendAmount,
+          },
+          {
+            headers: {
+              'Content-Type': 'application/json',
+            },
+          },
+        )
         .toPromise();
 
       const quoteId = quoteResult?.data.payload.id;
 
       const executeResult = await this.httpService
-        .put(`/currency_conversions/${quoteId}`)
+        .put(`/currency_conversions/${quoteId}`, {
+          heeaders: {
+            'Content-Type': 'application/json',
+          },
+        })
         .toPromise();
 
       if (executeResult) {

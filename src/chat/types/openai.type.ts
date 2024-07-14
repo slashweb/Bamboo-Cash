@@ -1,10 +1,12 @@
 export enum Operation {
+  CHECK_BALANCE = 'check_balance',
   DEPOSIT = 'deposit',
   SEARCH_USER_NETWORK = 'search_user_network',
   SEARCH_CONTACT = 'search_contact',
   CREATE_CONTACT = 'create_contact',
   SEND_MONEY = 'send_money',
   CONFIRM_TRANSACTION = 'confirm_transaction',
+  SWAP_TO_APECOIN = 'swap_to_apecoin',
 }
 
 export enum DepositType {
@@ -45,5 +47,10 @@ export type SendMoneyAction = {
   contactName: string;
 };
 export type ConfirmTransactionAction = {
-  threadId: string;
+  type: DepositType;
+  value: string;
+};
+
+export type SwapToApeCoinAction = {
+  walletId: string;
 };

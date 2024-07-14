@@ -4,6 +4,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TwilioModule } from 'nestjs-twilio';
 
 import { CircleModule } from '../circle/circle.module';
+import { PaymentModule } from '../payment/payment.module';
 import { SharedModule } from '../shared/shared.module';
 import { UserNetworkRepository } from '../user/repositories/user-network.repository';
 import { UserModule } from '../user/user.module';
@@ -28,6 +29,7 @@ import { OpenAIService } from './services/open-ai.service';
     UserModule,
     CircleModule,
     WireModule,
+    PaymentModule,
   ],
   providers: [
     ChatService,

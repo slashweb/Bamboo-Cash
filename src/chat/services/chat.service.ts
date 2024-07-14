@@ -4,11 +4,13 @@ import { ConfigService } from '@nestjs/config';
 import { TwilioService } from 'nestjs-twilio';
 
 import { CircleService } from '../../circle/services/circle.service';
+import { PaymentService } from '../../payment/services/payment.service';
 import { AppLogger } from '../../shared/logger/logger.service';
 import { UserNetworkRepository } from '../../user/repositories/user-network.repository';
 import { UserService } from '../../user/services/user.service';
 import { TransactionRepository } from '../../wire/repositories/transaction.repository';
 import {
+  ConfirmTransactionAction,
   CreateContactAction,
   DepositType,
   DepostAction,
@@ -16,9 +18,11 @@ import {
   Operation,
   SearchContactAction,
   SendMoneyAction,
+  SwapToApeCoinAction,
 } from '../types/openai.type';
 import { TwilioMessage } from '../types/twilio.type';
 import { OpenAIService } from './open-ai.service';
+import { isEmpty } from 'class-validator';
 
 const SESSION_TTL = 60000 * 120;
 
@@ -34,6 +38,7 @@ export class ChatService {
     private readonly circleService: CircleService,
     private readonly transactionRepository: TransactionRepository,
     private readonly userNetworkRepository: UserNetworkRepository,
+    private readonly paymentService: PaymentService,
     @Inject(CACHE_MANAGER) private cacheManager: Cache,
   ) {
     this.fromNumber = `whatsapp:${this.configService.get('twilio.phoneNumber')}`;
@@ -137,7 +142,37 @@ export class ChatService {
       ((await this.cacheManager.get(
         `chat:thread:${number}:userId`,
       )) as number) ?? 0;
-    if (openIaAction.operation === Operation.DEPOSIT) {
+
+    if (openIaAction.operation === Operation.CHECK_BALANCE) {
+      const userNetworks =
+        await this.userService.findUserNetworksByUserId(userId);
+      const balances = await Promise.all(
+        userNetworks.map(async (userNetwork) => {
+          const balance = await this.circleService.getBalanceOfWallets(
+            userNetwork.originalId,
+          );
+          return balance;
+        }),
+      );
+
+      const response = balances.map((balance) => {
+        return balance?.tokenBalances?.map((balance) => {
+          // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+          // @ts-expect-error
+          return `${balance.token.name}-${balance.token.symbol}: ${balance.amount} -> $${balance.amountInUSD} USD`;
+        });
+      });
+
+      const removeEmpty = response.filter((balance) => !isEmpty(balance));
+
+      await this.receiveMessage(
+        {
+          ...message,
+          Body: removeEmpty.join('\n'),
+        },
+        `Send the user the balance of the user in all the networks and end the conversation in a list of the balances`,
+      );
+    } else if (openIaAction.operation === Operation.DEPOSIT) {
       const payload = openIaAction.payload as DepostAction;
 
       const userNetworks =
@@ -274,6 +309,8 @@ export class ChatService {
         `Now you are sending directly the message to the contact to accept or reject the wire transfer, and replace the sender phone number with this one ${transaction?.fromUser.phone}`,
       );
     } else if (openIaAction.operation === Operation.CONFIRM_TRANSACTION) {
+      const payload = openIaAction.payload as ConfirmTransactionAction;
+
       const destinationUser =
         await this.userService.findUserByPhoneNumber(number);
       const transaction = await this.transactionRepository.findOne({
@@ -305,10 +342,60 @@ export class ChatService {
           ...message,
           Body: `I just confirmed`,
         },
-        `Notify to the user that the transaction was completed successfully`,
+        `Notify to the user that the transaction was sent and the provider BITSO will process the wire to the destination user`,
       );
 
-      this.processTransaction(finishTransaction?.id ?? 0);
+      //await this.processTransaction(finishTransaction?.id ?? 0);
+
+      if (payload.type === DepositType.BANK) {
+        const contact = await this.userService.findContactByFilter({
+          phone: finishTransaction?.toUser?.phone ?? '',
+        });
+        await this.paymentService.sendWithdrawal({
+          amount: finishTransaction?.amount.toString() ?? '0',
+          clabe: payload.value ?? '',
+          beneficiary: contact?.name ?? '',
+        });
+        await this.receiveMessage(
+          {
+            ...message,
+            Body: `Im still waiting`,
+          },
+          `Notify to the user that the transaction was completely withdrawed`,
+        );
+      } else if (payload.type === DepositType.CRYPTO) {
+        console.log('payload: ', { payload });
+        if (payload.value === 'ApeCoin') {
+          await this.receiveMessage(
+            {
+              ...message,
+              Body: `Done`,
+            },
+            `The user choose ApeCoin to deposit the money, ask for the wallet id to deposit the money`,
+          );
+        }
+      }
+    } else if (openIaAction.operation === Operation.SWAP_TO_APECOIN) {
+      const payload = openIaAction.payload as SwapToApeCoinAction;
+      console.log('payload: ', payload);
+      const threadId = await this.getThreadId(number);
+      const transaction = await this.transactionRepository.findOne({
+        relations: ['fromUser', 'toUser', 'userNetwork'],
+        where: {
+          threadId,
+        },
+      });
+      if (!transaction) return;
+
+      console.log('transaction: ', transaction);
+
+      const swapResponse = await this.paymentService.SwapBetweenCurrency(
+        'matic',
+        'ape',
+        transaction.amount.toString(),
+      );
+
+      console.log('swapResponse: ', swapResponse);
     }
   }
 
@@ -354,7 +441,7 @@ export class ChatService {
     const walletId = transaction.userNetwork.originalId;
     const amount = transaction.amount;
     let tokenId = '';
-    const destinationAddress = toUserNetwork.address;
+    let destinationAddress = toUserNetwork.address;
 
     const walletWithEnoughAmount = await this.getWalletWithBalance(
       walletId,
@@ -367,6 +454,9 @@ export class ChatService {
 
     tokenId = walletWithEnoughAmount.token.id;
 
+    destinationAddress =
+      this.configService.get<string>('bitso.walletAddressId') ?? '';
+
     const response = await this.circleService.transferForSameNetwork(
       walletId,
       tokenId,
@@ -375,6 +465,7 @@ export class ChatService {
     );
 
     console.log(JSON.stringify(response, null, 2));
+    return response;
   }
 
   async getWalletWithBalance(walletId: string, amount: string) {

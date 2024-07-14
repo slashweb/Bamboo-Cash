@@ -45,5 +45,6 @@ export default (): any => ({
     env: process.env.BITSO_ENV,
     apiKey: process.env.BITSO_API_KEY,
     apiSecret: process.env.BITSO_API_SECRET,
+    walletAddressId: process.env.BITSO_WALLET_ADDRESS_ID,
   },
 });

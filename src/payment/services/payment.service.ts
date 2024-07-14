@@ -26,6 +26,12 @@ export class PaymentService {
     toCurrency: string,
     spendAmount: string,
   ) {
+    console.log({
+      fromCurrency,
+      toCurrency,
+      spendAmount,
+    });
+
     const walletId = await this.bitsoService.SwapBetweenCurrency(
       fromCurrency,
       toCurrency,

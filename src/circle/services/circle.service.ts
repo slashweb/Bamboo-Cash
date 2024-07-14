@@ -144,6 +144,13 @@ export class CircleService {
     amounts: string[],
     destinationAddress: string,
   ) {
+    console.log({
+      walletId,
+      tokenId,
+      amounts,
+      destinationAddress,
+    });
+
     const circleDeveloperSdk = initiateDeveloperControlledWalletsClient({
       apiKey: this.API_KEY,
       entitySecret: this.API_SK,
