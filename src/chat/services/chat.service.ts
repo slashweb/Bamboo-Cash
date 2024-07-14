@@ -359,8 +359,8 @@ export class ChatService {
       console.log('transaction: ', transaction);
 
       const swapResponse = await this.paymentService.SwapBetweenCurrency(
-        'MATIC',
-        'APE',
+        'matic',
+        'ape',
         transaction.amount.toString(),
       );
 

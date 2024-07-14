@@ -74,17 +74,29 @@ export class BitsoService {
   ) {
     try {
       const quoteResult = await this.httpService
-        .post('/currency_conversions', {
-          from_currency: fromCurrency,
-          to_currency: toCurrency,
-          spend_amount: spendAmount,
-        })
+        .post(
+          '/currency_conversions',
+          {
+            from_currency: fromCurrency,
+            to_currency: toCurrency,
+            spend_amount: spendAmount,
+          },
+          {
+            headers: {
+              'Content-Type': 'application/json',
+            },
+          },
+        )
         .toPromise();
 
       const quoteId = quoteResult?.data.payload.id;
 
       const executeResult = await this.httpService
-        .put(`/currency_conversions/${quoteId}`)
+        .put(`/currency_conversions/${quoteId}`, {
+          heeaders: {
+            'Content-Type': 'application/json',
+          },
+        })
         .toPromise();
 
       if (executeResult) {
@@ -92,9 +104,6 @@ export class BitsoService {
       }
     } catch (error) {
       console.error({ error });
-      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-      // @ts-expect-error
-      console.error({ error: error?.response?.data });
     }
   }
 
