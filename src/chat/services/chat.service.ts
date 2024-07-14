@@ -1,6 +1,7 @@
 import { Cache, CACHE_MANAGER } from '@nestjs/cache-manager';
 import { Inject, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { isEmpty } from 'class-validator';
 import { TwilioService } from 'nestjs-twilio';
 
 import { CircleService } from '../../circle/services/circle.service';
@@ -22,7 +23,6 @@ import {
 } from '../types/openai.type';
 import { TwilioMessage } from '../types/twilio.type';
 import { OpenAIService } from './open-ai.service';
-import { isEmpty } from 'class-validator';
 
 const SESSION_TTL = 60000 * 120;
 
@@ -172,6 +172,38 @@ export class ChatService {
         },
         `Send the user the balance of the user in all the networks and end the conversation in a list of the balances`,
       );
+    }
+    if (openIaAction.operation === Operation.OPERATION_HISTORY) {
+      const userNetworks =
+        await this.userService.findUserNetworksByUserId(userId);
+
+      const polygonNetwork = userNetworks.find(
+        (network) => network.network.name === 'Polygon',
+      );
+
+      if (!polygonNetwork) return;
+
+      const result = await this.circleService.getTransactionHistory(
+        polygonNetwork?.address,
+        'polygon',
+      );
+      if (!result) {
+        await this.receiveMessage(
+          {
+            ...message,
+            Body: 'I dont have any transaction history',
+          },
+          `Notify to the user that he does not have any transaction history`,
+        );
+      } else {
+        await this.receiveMessage(
+          {
+            ...message,
+            Body: `I have the transaction history, ${JSON.stringify(result)}`,
+          },
+          `Notify to the user that he has the transaction history and send the history to the user in a pretty way and in the beginning of the message add the message "Proccesed with *BLOCKSCOUT*"`,
+        );
+      }
     } else if (openIaAction.operation === Operation.DEPOSIT) {
       const payload = openIaAction.payload as DepostAction;
 

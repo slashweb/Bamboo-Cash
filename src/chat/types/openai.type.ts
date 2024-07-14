@@ -1,5 +1,6 @@
 export enum Operation {
   CHECK_BALANCE = 'check_balance',
+  OPERATION_HISTORY = 'operation_history',
   DEPOSIT = 'deposit',
   SEARCH_USER_NETWORK = 'search_user_network',
   SEARCH_CONTACT = 'search_contact',
