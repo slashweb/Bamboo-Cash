@@ -93,7 +93,7 @@ export class CircleService {
 
     const ALL_BLOCKCHAINS = ['ETH', 'MATIC'] as Blockchain[];
 
-    console.log('all blockchains', ALL_BLOCKCHAINS, walletSetId)
+    console.log('all blockchains', ALL_BLOCKCHAINS, walletSetId);
     const responsesArray = [] as any;
     for (const blockchain of ALL_BLOCKCHAINS) {
       console.log('blockchain', blockchain);
@@ -195,6 +195,29 @@ export class CircleService {
     });
 
     return res.data;
+  }
+
+  async getTransactionHistory(address: string, chain: string) {
+    let blockScoutApi = `https://polygon.blockscout.com/api/v2/addresses/${address}/transactions`;
+    let detailTransactionLink = 'https://polygon.blockscout.com/tx/';
+
+    if (chain === 'eth') {
+      blockScoutApi = `https://eth.blockscout.com/api/v2/addresses/${address}/transactions`;
+      detailTransactionLink = 'https://eth.blockscout.com/tx/';
+    }
+
+    const response = await fetch(blockScoutApi);
+    const res = await response.json();
+
+    return res.items.map((item: { hash: string; status: any; value: any; timestamp: any; }) => {
+      return {
+        hash: item.hash,
+        status: item.status,
+        value: item.value,
+        timestamp: item.timestamp,
+        link: detailTransactionLink + item.hash,
+      };
+    });
   }
 
   // async transferForDifferentNetwork(

@@ -93,6 +93,15 @@ export class CircleController {
     }
   }
 
+  @Get('transaction/history/:address/:chain')
+  async getTransactions(@Param('address') address: string, @Param('chain') chain: string) {
+    try {
+      return await this.circleService.getTransactionHistory(address, chain);
+    } catch (error) {
+      return error;
+    }
+  }
+
   @Post('transfer-same-network')
   async transfer(
     @Body()
