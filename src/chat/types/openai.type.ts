@@ -1,4 +1,5 @@
 export enum Operation {
+  CHECK_BALANCE = 'check_balance',
   DEPOSIT = 'deposit',
   SEARCH_USER_NETWORK = 'search_user_network',
   SEARCH_CONTACT = 'search_contact',

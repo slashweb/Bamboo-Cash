@@ -22,6 +22,7 @@ import {
 } from '../types/openai.type';
 import { TwilioMessage } from '../types/twilio.type';
 import { OpenAIService } from './open-ai.service';
+import { isEmpty } from 'class-validator';
 
 const SESSION_TTL = 60000 * 120;
 
@@ -141,7 +142,37 @@ export class ChatService {
       ((await this.cacheManager.get(
         `chat:thread:${number}:userId`,
       )) as number) ?? 0;
-    if (openIaAction.operation === Operation.DEPOSIT) {
+
+    if (openIaAction.operation === Operation.CHECK_BALANCE) {
+      const userNetworks =
+        await this.userService.findUserNetworksByUserId(userId);
+      const balances = await Promise.all(
+        userNetworks.map(async (userNetwork) => {
+          const balance = await this.circleService.getBalanceOfWallets(
+            userNetwork.originalId,
+          );
+          return balance;
+        }),
+      );
+
+      const response = balances.map((balance) => {
+        return balance?.tokenBalances?.map((balance) => {
+          // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+          // @ts-expect-error
+          return `${balance.token.name}-${balance.token.symbol}: ${balance.amount} -> $${balance.amountInUSD} USD`;
+        });
+      });
+
+      const removeEmpty = response.filter((balance) => !isEmpty(balance));
+
+      await this.receiveMessage(
+        {
+          ...message,
+          Body: removeEmpty.join('\n'),
+        },
+        `Send the user the balance of the user in all the networks and end the conversation in a list of the balances`,
+      );
+    } else if (openIaAction.operation === Operation.DEPOSIT) {
       const payload = openIaAction.payload as DepostAction;
 
       const userNetworks =
